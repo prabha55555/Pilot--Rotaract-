@@ -15,7 +15,6 @@ import DashboardPage from './pages/protected/DashboardPage'
 import ActivitiesPage from './pages/protected/ActivitiesPage'
 import LeaderboardPage from './pages/protected/LeaderboardPage'
 import EvaluationsPage from './pages/protected/EvaluationsPage'
-import DocumentsPage from './pages/protected/DocumentsPage'
 import ReportsPage from './pages/protected/ReportsPage'
 import ProfilePage from './pages/protected/ProfilePage'
 import SettingsPage from './pages/protected/SettingsPage'
@@ -87,14 +86,7 @@ const AppContent = () => {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/documents"
-          element={
-            <ProtectedRoute>
-              <DocumentsPage />
-            </ProtectedRoute>
-          }
-        />
+
         <Route
           path="/reports"
           element={

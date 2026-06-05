@@ -4,8 +4,9 @@ import { supabase } from '../../services/supabase'
 import { Link, useNavigate } from 'react-router-dom'
 import { 
   FileText, Award, Calendar, Users, Activity, 
-  TrendingUp, CheckCircle, Clock, AlertCircle, PlusCircle, ArrowRight
+  TrendingUp, CheckCircle, Clock, AlertCircle, PlusCircle, ArrowRight, Eye
 } from 'lucide-react'
+import { ActivityDetailsModal } from '../../components/ui/ActivityDetailsModal'
 import { StatCard } from '../../components/ui/StatCard'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Badge } from '../../components/ui/Badge'
@@ -19,6 +20,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({})
   const [extraData, setExtraData] = useState({})
+  const [selectedActivity, setSelectedActivity] = useState(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -51,7 +54,7 @@ export default function DashboardPage() {
           // 4. Latest Evaluation received
           const { data: latestEval } = await supabase
             .from('evaluations')
-            .select('*, evaluator:users(name)')
+            .select('*, evaluator:users!evaluator_id(name)')
             .eq('candidate_id', user.id)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -91,7 +94,7 @@ export default function DashboardPage() {
           const { data: pendingActivities } = await supabase
             .from('activities')
             .select('*, user:users(name, club)')
-            .eq('status', 'Submitted')
+            .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
             .order('created_at', { ascending: true })
 
           setStats({
@@ -118,7 +121,7 @@ export default function DashboardPage() {
           const { count: pendingCount } = await supabase
             .from('activities')
             .select('*', { count: 'exact', head: true })
-            .eq('status', 'Submitted')
+            .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
 
           // 3. Recent activity submissions
           const { data: recentSubmissions } = await supabase
@@ -179,6 +182,34 @@ export default function DashboardPage() {
     }
 
     fetchDashboardData()
+
+    // Subscribe to realtime database changes for synchronization
+    const activitiesChannel = supabase
+      .channel('dashboard-activities')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'activities' },
+        () => {
+          fetchDashboardData()
+        }
+      )
+      .subscribe()
+
+    const evaluationsChannel = supabase
+      .channel('dashboard-evaluations')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'evaluations' },
+        () => {
+          fetchDashboardData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(activitiesChannel)
+      supabase.removeChannel(evaluationsChannel)
+    }
   }, [user, userRole])
 
   if (loading) {
@@ -324,18 +355,28 @@ export default function DashboardPage() {
           <div className="divide-y divide-surface-border">
             {extraData.pendingActivities.slice(0, 5).map((act) => (
               <div key={act.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-muted/50 rounded-xl px-2 transition-all">
-                <div>
-                  <h4 className="font-semibold text-sm text-text-main">{act.title}</h4>
+                <div className="flex-1 cursor-pointer" onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}>
+                  <h4 className="font-semibold text-sm text-text-main hover:text-brand transition-colors">{act.title}</h4>
                   <p className="text-xs text-text-muted font-medium mt-1">
                     Candidate: {act.user?.name} • Category: {act.category}
                   </p>
                 </div>
-                <Button 
-                  size="sm"
-                  onClick={() => navigate('/evaluate', { state: { candidateId: act.user_id } })}
-                >
-                  Review Candidate
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={<Eye size={14} />}
+                    onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}
+                  >
+                    Details
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={() => navigate('/evaluate', { state: { candidateId: act.user_id } })}
+                  >
+                    Review Candidate
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -378,20 +419,29 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {extraData.recentSubmissions.map((act) => (
                 <div key={act.id} className="p-4 border border-surface-border hover:bg-surface-muted rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
-                  <div>
-                    <h4 className="font-semibold text-sm text-text-main">{act.title}</h4>
+                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}>
+                    <h4 className="font-semibold text-sm text-text-main hover:text-brand transition-colors">{act.title}</h4>
                     <p className="text-xs text-text-muted font-medium mt-1">
                       By: <span className="text-text-main">{act.user?.name}</span> ({act.user?.role}) • {act.user?.club}
                     </p>
                     <p className="text-xs text-text-muted mt-1 font-medium">Category: {act.category}</p>
                   </div>
-                  <Badge variant={
-                    act.status === 'Approved' ? 'success' : 
-                    act.status === 'Rejected' ? 'error' : 
-                    act.status === 'Submitted' ? 'warning' : 'default'
-                  }>
-                    {act.status}
-                  </Badge>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}
+                      className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
+                      title="View Details"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <Badge variant={
+                      act.status === 'Approved' ? 'success' : 
+                      act.status === 'Rejected' ? 'error' : 
+                      act.status === 'Submitted' ? 'warning' : 'default'
+                    }>
+                      {act.status}
+                    </Badge>
+                  </div>
                 </div>
               ))}
             </div>
@@ -462,20 +512,29 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {extraData.recentSubmissions.map((act) => (
                 <div key={act.id} className="p-4 border border-surface-border hover:bg-surface-muted rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
-                  <div>
-                    <h4 className="font-semibold text-sm text-text-main">{act.title}</h4>
+                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}>
+                    <h4 className="font-semibold text-sm text-text-main hover:text-brand transition-colors">{act.title}</h4>
                     <p className="text-xs text-text-muted font-medium mt-1">
                       By: <span className="text-text-main">{act.user?.name}</span> ({act.user?.role}) • {act.user?.club}
                     </p>
                     <p className="text-xs text-text-muted mt-1 font-medium">Category: {act.category}</p>
                   </div>
-                  <Badge variant={
-                    act.status === 'Approved' ? 'success' : 
-                    act.status === 'Rejected' ? 'error' : 
-                    act.status === 'Submitted' ? 'warning' : 'default'
-                  }>
-                    {act.status}
-                  </Badge>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}
+                      className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
+                      title="View Details"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <Badge variant={
+                      act.status === 'Approved' ? 'success' : 
+                      act.status === 'Rejected' ? 'error' : 
+                      act.status === 'Submitted' ? 'warning' : 'default'
+                    }>
+                      {act.status}
+                    </Badge>
+                  </div>
                 </div>
               ))}
             </div>
@@ -548,6 +607,13 @@ export default function DashboardPage() {
       {userRole === 'DT' && renderDT()}
       {userRole === 'Admin' && renderAdmin()}
       {userRole === 'SuperAdmin' && renderSuperAdmin()}
+
+      {/* Activity Details Modal */}
+      <ActivityDetailsModal
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        activity={selectedActivity}
+      />
     </div>
   )
 }

@@ -14,6 +14,7 @@ import { Toast } from '../../components/ui/Toast'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { ActivityDetailsModal } from '../../components/ui/ActivityDetailsModal'
 
 export default function ActivitiesPage() {
   const { user } = useAuth()
@@ -21,11 +22,15 @@ export default function ActivitiesPage() {
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
   
-  // Form State
+  // Details Modal State
+  const [selectedActivity, setSelectedActivity] = useState(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+
+  // Form Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingActivity, setEditingActivity] = useState(null)
   
-  // New Form Fields based on reference image
+  // Form Fields
   const [title, setTitle] = useState('')
   const [avenue, setAvenue] = useState('')
   const [projectType, setProjectType] = useState('')
@@ -37,7 +42,16 @@ export default function ActivitiesPage() {
   const [projectChair, setProjectChair] = useState('')
   const [projectChairContact, setProjectChairContact] = useState('')
   
-  const [file, setFile] = useState(null)
+  // File Upload State
+  const [photos, setPhotos] = useState([])
+  const [pdfReport, setPdfReport] = useState(null)
+  
+  // Edit existing files tracking
+  const [existingPhotos, setExistingPhotos] = useState([])
+  const [existingPdf, setExistingPdf] = useState(null)
+  const [photosToDelete, setPhotosToDelete] = useState([])
+  const [pdfToDelete, setPdfToDelete] = useState(null)
+
   const [submitting, setSubmitting] = useState(false)
 
   // Filters State
@@ -64,6 +78,27 @@ export default function ActivitiesPage() {
 
   useEffect(() => {
     fetchActivities()
+
+    // Subscribe to realtime database changes for synchronization
+    const activitiesChannel = supabase
+      .channel(`activities-user-${user?.id}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'activities',
+          filter: `user_id=eq.${user?.id}`
+        },
+        () => {
+          fetchActivities()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(activitiesChannel)
+    }
   }, [user])
 
   const showToast = (message, type = 'success') => {
@@ -81,7 +116,12 @@ export default function ActivitiesPage() {
     setEndDate('')
     setProjectChair('')
     setProjectChairContact('')
-    setFile(null)
+    setPhotos([])
+    setPdfReport(null)
+    setExistingPhotos([])
+    setExistingPdf(null)
+    setPhotosToDelete([])
+    setPdfToDelete(null)
   }
 
   const handleOpenCreateModal = () => {
@@ -90,7 +130,8 @@ export default function ActivitiesPage() {
     setIsModalOpen(true)
   }
 
-  const handleOpenEditModal = (activity) => {
+  const handleOpenEditModal = async (activity) => {
+    resetForm()
     setEditingActivity(activity)
     setTitle(activity.title)
     setAvenue(activity.avenue || '')
@@ -102,13 +143,43 @@ export default function ActivitiesPage() {
     setEndDate(activity.end_date ? new Date(activity.end_date).toISOString().slice(0, 16) : '')
     setProjectChair(activity.project_chair || '')
     setProjectChairContact(activity.project_chair_contact || '')
-    setFile(null)
+    
+    // Fetch associated files
+    try {
+      const { data: filesData, error } = await supabase
+        .from('files')
+        .select('*')
+        .eq('activity_id', activity.id)
+
+      if (error) throw error
+      const oldPhotos = filesData?.filter(f => ['jpg', 'jpeg', 'png', 'webp'].includes(f.file_type.toLowerCase())) || []
+      const oldPdf = filesData?.find(f => f.file_type.toLowerCase() === 'pdf') || null
+
+      setExistingPhotos(oldPhotos)
+      setExistingPdf(oldPdf)
+    } catch (err) {
+      console.error('Error fetching files for edit:', err)
+      showToast('Error loading previously uploaded files', 'error')
+    }
+
     setIsModalOpen(true)
   }
 
   const handleDeleteActivity = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this draft activity?')) return
+    if (!window.confirm('Are you sure you want to delete this activity submission?')) return
     try {
+      // Fetch and delete files associated
+      const { data: filesData } = await supabase.from('files').select('*').eq('activity_id', id)
+      if (filesData) {
+        for (const fileItem of filesData) {
+          const pathParts = fileItem.file_url.split('/activities/')
+          if (pathParts.length > 1) {
+            const storagePath = decodeURIComponent(pathParts[1])
+            await supabase.storage.from('activities').remove([storagePath])
+          }
+        }
+      }
+
       await api.deleteActivity(id)
       showToast('Activity deleted successfully')
       fetchActivities()
@@ -129,6 +200,70 @@ export default function ActivitiesPage() {
     }
   }
 
+  // File selection handlers
+  const handlePhotoSelect = (e) => {
+    const selected = Array.from(e.target.files)
+    const validPhotos = []
+    
+    selected.forEach(f => {
+      const ext = f.name.split('.').pop().toLowerCase()
+      if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+        showToast(`File "${f.name}" is not a supported format (JPG/PNG/WEBP).`, 'error')
+        return
+      }
+      if (f.size > 1024 * 1024) {
+        showToast(`Image "${f.name}" exceeds the 1MB size limit.`, 'error')
+        return
+      }
+      validPhotos.push(f)
+    })
+
+    setPhotos(prev => [...prev, ...validPhotos])
+    e.target.value = ''
+  }
+
+  const handlePdfSelect = (e) => {
+    const f = e.target.files[0]
+    if (f) {
+      const ext = f.name.split('.').pop().toLowerCase()
+      if (ext !== 'pdf') {
+        showToast('Only PDF files are allowed.', 'error')
+        e.target.value = ''
+        return
+      }
+      if (f.size > 5 * 1024 * 1024) {
+        showToast('PDF Report exceeds the 5MB size limit.', 'error')
+        e.target.value = ''
+        return
+      }
+      setPdfReport(f)
+    }
+    e.target.value = ''
+  }
+
+  const handleRemoveExistingPhoto = (p) => {
+    setExistingPhotos(prev => prev.filter(item => item.id !== p.id))
+    setPhotosToDelete(prev => [...prev, p])
+  }
+
+  const handleRemoveNewPhoto = (idx) => {
+    setPhotos(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleRemovePdf = () => {
+    if (pdfReport) {
+      setPdfReport(null)
+    } else if (existingPdf) {
+      setPdfToDelete(existingPdf)
+      setExistingPdf(null)
+    }
+  }
+
+  const handleOpenDetailsModal = (activity) => {
+    setSelectedActivity(activity)
+    setIsDetailsOpen(true)
+  }
+
   const handleFormSubmit = async (e) => {
     e.preventDefault()
     if (!title || !avenue || !projectType || !projectMode || !location || !description || !startDate || !endDate || !projectChair) {
@@ -141,46 +276,33 @@ export default function ActivitiesPage() {
       return
     }
 
-    if (file && file.size > 1024 * 1024) {
-      showToast('File size must be less than 1MB', 'error')
-      return
-    }
-
-    if (file) {
-      const ext = file.name.split('.').pop().toLowerCase()
-      if (!['jpg', 'jpeg', 'png'].includes(ext)) {
-        showToast('Only PNG, JPG, and JPEG files are allowed', 'error')
-        return
-      }
-    }
-
-    if (!file && !editingActivity) {
-      showToast('Please upload a project poster', 'error')
+    if (photos.length === 0 && existingPhotos.length === 0) {
+      showToast('Please upload at least one project photo.', 'error')
       return
     }
 
     setSubmitting(true)
     try {
-      let fileUrl = ''
-      let fileExt = ''
-      
-      // Upload file to Supabase storage if provided
-      if (file) {
-        fileExt = file.name.split('.').pop().toLowerCase()
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('activities')
-          .upload(fileName, file, { cacheControl: '3600', upsert: true })
-
-        if (uploadError) {
-          console.warn('Supabase storage upload failed, saving locally:', uploadError.message)
-          fileUrl = `https://mock.storage.local/proofs/${fileName}`
-        } else {
-          const { data: { publicUrl } } = supabase.storage.from('activities').getPublicUrl(fileName)
-          fileUrl = publicUrl
+      // 1. Delete files marked for deletion
+      for (const p of photosToDelete) {
+        const pathParts = p.file_url.split('/activities/')
+        if (pathParts.length > 1) {
+          const storagePath = decodeURIComponent(pathParts[1])
+          await supabase.storage.from('activities').remove([storagePath])
         }
+        await supabase.from('files').delete().eq('id', p.id)
       }
 
+      if (pdfToDelete) {
+        const pathParts = pdfToDelete.file_url.split('/activities/')
+        if (pathParts.length > 1) {
+          const storagePath = decodeURIComponent(pathParts[1])
+          await supabase.storage.from('activities').remove([storagePath])
+        }
+        await supabase.from('files').delete().eq('id', pdfToDelete.id)
+      }
+
+      // 2. Save/Update activity meta
       const activityData = {
         title,
         category: 'Event Conducted',
@@ -194,29 +316,68 @@ export default function ActivitiesPage() {
         project_chair: projectChair,
         project_chair_contact: projectChairContact,
         userId: user.id,
-        status: 'Submitted'
+        status: editingActivity?.status === 'Rejected' ? 'Submitted' : (editingActivity?.status || 'Submitted')
       }
 
       let resultActivity
       if (editingActivity) {
         resultActivity = await api.updateActivity(editingActivity.id, activityData)
-        showToast('Project updated and submitted successfully!')
+        showToast('Project updated and resubmitted successfully!')
       } else {
         resultActivity = await api.createActivity(activityData)
         showToast('Project created and submitted for review!')
       }
 
-      // If there's a file, insert file record linked to this activity
-      if (fileUrl && resultActivity?.id) {
-        const { error: fileRecordError } = await supabase
-          .from('files')
-          .insert({
-            activity_id: resultActivity.id,
-            file_name: file.name,
-            file_url: fileUrl,
-            file_type: fileExt
-          })
-        if (fileRecordError) console.error('Error inserting file record:', fileRecordError)
+      // 3. Upload new photos
+      for (const p of photos) {
+        const ext = p.name.split('.').pop().toLowerCase()
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${ext}`
+        
+        let fileUrl = ''
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('activities')
+          .upload(fileName, p, { cacheControl: '3600', upsert: true })
+
+        if (uploadError) {
+          console.warn('Storage upload failed, using local fallback:', uploadError.message)
+          fileUrl = `https://mock.storage.local/proofs/${fileName}`
+        } else {
+          const { data: { publicUrl } } = supabase.storage.from('activities').getPublicUrl(fileName)
+          fileUrl = publicUrl
+        }
+
+        await supabase.from('files').insert({
+          activity_id: resultActivity.id,
+          file_name: p.name,
+          file_url: fileUrl,
+          file_type: ext
+        })
+      }
+
+      // 4. Upload new PDF report
+      if (pdfReport) {
+        const ext = 'pdf'
+        const fileName = `${user.id}/${Date.now()}-report.${ext}`
+        
+        let fileUrl = ''
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('activities')
+          .upload(fileName, pdfReport, { cacheControl: '3600', upsert: true })
+
+        if (uploadError) {
+          console.warn('PDF upload failed, using local fallback:', uploadError.message)
+          fileUrl = `https://mock.storage.local/proofs/${fileName}`
+        } else {
+          const { data: { publicUrl } } = supabase.storage.from('activities').getPublicUrl(fileName)
+          fileUrl = publicUrl
+        }
+
+        await supabase.from('files').insert({
+          activity_id: resultActivity.id,
+          file_name: pdfReport.name,
+          file_url: fileUrl,
+          file_type: ext
+        })
       }
 
       setIsModalOpen(false)
@@ -271,6 +432,8 @@ export default function ActivitiesPage() {
           row.status === 'Approved' ? 'success' :
           row.status === 'Rejected' ? 'error' :
           row.status === 'Submitted' ? 'warning' :
+          row.status === 'Pending Review' ? 'warning' :
+          row.status === 'Resubmitted' ? 'warning' :
           'default'
         }>
           {row.status}
@@ -280,10 +443,27 @@ export default function ActivitiesPage() {
     {
       header: 'Actions',
       accessor: 'actions',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          {row.status === 'Draft' ? (
-            <>
+      render: (row) => {
+        const isPending = ['Submitted', 'Pending Review', 'Resubmitted'].includes(row.status)
+        const isDraft = row.status === 'Draft'
+        const isRejected = row.status === 'Rejected'
+        const isApproved = row.status === 'Approved'
+
+        const canEdit = isDraft || isPending || isRejected
+        const canDelete = isDraft || isPending
+        const canSubmit = isDraft
+
+        return (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleOpenDetailsModal(row)}
+              title="View Project Details"
+              className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
+            >
+              <Eye size={14} className="stroke-[2.5]" />
+            </button>
+
+            {canSubmit && (
               <button
                 onClick={() => handleSubmitReview(row.id)}
                 title="Submit for review"
@@ -291,30 +471,34 @@ export default function ActivitiesPage() {
               >
                 <Check size={14} className="stroke-[2.5]" />
               </button>
+            )}
+
+            {canEdit && (
               <button
                 onClick={() => handleOpenEditModal(row)}
-                title="Edit Draft"
+                title={isRejected ? "Edit & Resubmit" : "Edit Submission"}
                 className="p-2 bg-blue-50 text-brand hover:bg-brand hover:text-white rounded-lg transition-all"
               >
                 <Edit2 size={14} className="stroke-[2.5]" />
               </button>
+            )}
+
+            {canDelete && (
               <button
                 onClick={() => handleDeleteActivity(row.id)}
-                title="Delete Draft"
+                title="Delete Submission"
                 className="p-2 bg-red-50 text-semantic-error hover:bg-semantic-error hover:text-white rounded-lg transition-all"
               >
                 <Trash2 size={14} className="stroke-[2.5]" />
               </button>
-            </>
-          ) : (
-            <span className="text-xs text-text-muted font-medium italic px-2">{row.status}</span>
-          )}
-        </div>
-      )
+            )}
+          </div>
+        )
+      }
     }
   ]
 
-  // Shared input class
+  // Shared input styles
   const inputClass = "w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm font-medium text-text-main focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all placeholder:text-gray-400"
   const selectClass = "w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm font-medium text-text-main focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all cursor-pointer appearance-none"
   const labelClass = "block text-xs font-semibold text-gray-500 tracking-wide mb-1.5 uppercase"
@@ -578,52 +762,107 @@ export default function ActivitiesPage() {
             </div>
           </div>
 
-          {/* ── Section 4: Project Poster ── */}
+          {/* ── Section 4: Project Evidence ── */}
           <div>
             <h3 className="text-sm font-bold text-text-main uppercase tracking-wider mb-4">
-              Project Poster <span className="text-red-500">*</span>
+              Project Evidence & Documents
             </h3>
-            <div className="w-full p-8 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-3 relative hover:border-brand/40 hover:bg-brand/5 transition-all group cursor-pointer">
-              <input
-                type="file"
-                onChange={(e) => {
-                  const f = e.target.files[0]
-                  if (f) {
-                    const ext = f.name.split('.').pop().toLowerCase()
-                    if (!['jpg', 'jpeg', 'png'].includes(ext)) {
-                      showToast('Only PNG, JPG, and JPEG files are allowed', 'error')
-                      e.target.value = ''
-                      return
-                    }
-                    if (f.size > 1024 * 1024) {
-                      showToast('File size must be less than 1MB', 'error')
-                      e.target.value = ''
-                      return
-                    }
-                    setFile(f)
-                  }
-                }}
-                accept=".jpg,.jpeg,.png"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <div className="w-12 h-12 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center group-hover:bg-brand-light group-hover:text-brand transition-all">
-                <Upload size={22} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Photo Uploads Section */}
+              <div className="space-y-4">
+                <label className={labelClass}>
+                  Project Photos <span className="text-red-500">*</span>
+                </label>
+                <div className="w-full p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 relative hover:border-brand/40 hover:bg-brand/5 transition-all group cursor-pointer font-outfit">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handlePhotoSelect}
+                    accept=".jpg,.jpeg,.png,.webp"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Upload size={20} className="text-text-muted" />
+                  <div className="text-center pointer-events-none">
+                    <p className="text-xs font-semibold text-text-main">
+                      <span className="text-brand">Upload photos</span> or drag & drop
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">JPG, PNG, WEBP (Max 1MB per image)</p>
+                  </div>
+                </div>
+
+                {/* Previews & Existing Photos List */}
+                <div className="flex flex-wrap gap-2.5 mt-2">
+                  {/* Existing Photos */}
+                  {existingPhotos.map(p => (
+                    <div key={p.id} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 group">
+                      <img src={p.file_url} className="w-full h-full object-cover" alt="Preview" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExistingPhoto(p)}
+                        className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* New Selected Photos Previews */}
+                  {photos.map((p, idx) => (
+                    <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 group">
+                      <img src={URL.createObjectURL(p)} className="w-full h-full object-cover" alt="Preview" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveNewPhoto(idx)}
+                        className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="text-center pointer-events-none">
-                {file ? (
-                  <div>
-                    <p className="text-sm font-semibold text-brand truncate max-w-[300px]">{file.name}</p>
-                    <p className="text-xs text-gray-500 mt-1">{(file.size / 1024).toFixed(1)} KB</p>
+
+              {/* PDF Report Upload Section */}
+              <div className="space-y-4">
+                <label className={labelClass}>
+                  PDF Project Report (Optional)
+                </label>
+                {!existingPdf && !pdfReport ? (
+                  <div className="w-full p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 relative hover:border-brand/40 hover:bg-brand/5 transition-all group cursor-pointer font-outfit">
+                    <input
+                      type="file"
+                      onChange={handlePdfSelect}
+                      accept=".pdf"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <FileText size={20} className="text-text-muted" />
+                    <div className="text-center pointer-events-none">
+                      <p className="text-xs font-semibold text-text-main">
+                        <span className="text-brand">Upload PDF Report</span> or drag & drop
+                      </p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">PDF Format (Max 5MB)</p>
+                    </div>
                   </div>
                 ) : (
-                  <>
-                    <p className="text-sm font-medium text-text-main">
-                      <span className="text-brand font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">PNG, JPG or JPEG (MAX. 1MB)</p>
-                  </>
+                  <div className="p-4 bg-gray-100 border border-gray-200 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <FileText size={20} className="text-red-500 flex-shrink-0" />
+                      <span className="text-xs font-semibold text-text-main truncate max-w-[200px]">
+                        {pdfReport ? pdfReport.name : existingPdf.file_name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePdf}
+                      className="p-1.5 hover:bg-gray-200 rounded-lg text-semantic-error transition-all"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 )}
               </div>
+
             </div>
           </div>
 
@@ -653,6 +892,13 @@ export default function ActivitiesPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Reusable Activity Details Modal */}
+      <ActivityDetailsModal 
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        activity={selectedActivity}
+      />
 
       {/* Floating Toast Notification */}
       {toast && (

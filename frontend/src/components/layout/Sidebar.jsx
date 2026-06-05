@@ -34,7 +34,6 @@ const roleMenus = {
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'User Management', path: '/users', icon: Users },
     { label: 'Promotions', path: '/promotions', icon: Award },
-    { label: 'Documents', path: '/documents', icon: FileText },
     { label: 'Reports', path: '/reports', icon: FileText },
     { label: 'Settings', path: '/settings', icon: Settings },
   ],
