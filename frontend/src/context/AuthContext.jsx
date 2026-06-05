@@ -14,21 +14,23 @@ export const AuthProvider = ({ children }) => {
     const getSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        setUser(session?.user || null)
         if (session?.user) {
-          // Fetch user role from users table
+          // Fetch user role and name from users table
           const { data, error } = await supabase
             .from('users')
-            .select('role')
+            .select('role, name')
             .eq('id', session.user.id)
             .single()
           
           if (error) {
-            console.error('❌ Role fetch error (getSession):', error.message, error)
+            console.error('❌ Role and Name fetch error (getSession):', error.message, error)
             throw error
           }
-          console.log('✅ Role fetched:', data?.role)
+          console.log('✅ Role and Name fetched:', data?.role, data?.name)
           setUserRole(data?.role || null)
+          setUser({ ...session.user, name: data?.name || '' })
+        } else {
+          setUser(null)
         }
       } catch (err) {
         console.error('❌ Auth session error:', err.message)
@@ -43,19 +45,20 @@ export const AuthProvider = ({ children }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user || null)
         if (session?.user) {
           const { data, error } = await supabase
             .from('users')
-            .select('role')
+            .select('role, name')
             .eq('id', session.user.id)
             .single()
           if (error) {
-            console.error('❌ Role fetch error (onAuthStateChange):', error.message, error)
+            console.error('❌ Role and Name fetch error (onAuthStateChange):', error.message, error)
           }
-          console.log('✅ Role fetched (auth change):', data?.role)
+          console.log('✅ Role and Name fetched (auth change):', data?.role, data?.name)
           setUserRole(data?.role || null)
+          setUser({ ...session.user, name: data?.name || '' })
         } else {
+          setUser(null)
           setUserRole(null)
         }
       }
