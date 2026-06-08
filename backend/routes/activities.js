@@ -1,8 +1,10 @@
 import express from 'express'
 import { supabase } from '../config/supabase.js'
 import { v4 as uuidv4 } from 'uuid'
+import multer from 'multer'
 
 const router = express.Router()
+const upload = multer({ storage: multer.memoryStorage() })
 
 // Create activity
 router.post('/', async (req, res) => {
@@ -157,13 +159,224 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
+// Ensure 'activities' storage bucket exists
+const ensureBucketExists = async () => {
+  try {
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets()
+    if (listError) throw listError
+
+    const hasActivities = buckets.some(b => b.name === 'activities')
+    if (!hasActivities) {
+      console.log('Bucket "activities" not found. Creating it...')
+      const { error: createError } = await supabase.storage.createBucket('activities', {
+        public: true,
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'application/pdf', 'image/webp'],
+        fileSizeLimit: 10485760 // 10MB
+      })
+      if (createError) throw createError
+      console.log('Bucket "activities" created successfully.')
+    }
+  } catch (err) {
+    console.error('Warning: Could not ensure "activities" bucket exists:', err.message)
+  }
+}
+
+ensureBucketExists()
+
+// Helper: extract the storage path from a Supabase file URL
+const extractStoragePath = (fileUrl) => {
+  if (!fileUrl) return null
+  try {
+    // Handles URLs like:
+    //   https://<ref>.supabase.co/storage/v1/object/public/activities/<path>
+    //   https://<ref>.supabase.co/storage/v1/object/activities/<path>
+    //   https://<ref>.supabase.co/storage/v1/object/sign/activities/<path>?token=...
+    const url = new URL(fileUrl)
+    const match = url.pathname.match(/\/storage\/v1\/object\/(?:public\/|sign\/)?activities\/(.+)/)
+    if (match) {
+      return decodeURIComponent(match[1].split('?')[0]) // strip query params
+    }
+  } catch {
+    // If not a valid URL, try simple string split as fallback
+    const parts = fileUrl.split('/activities/')
+    if (parts.length > 1) {
+      return decodeURIComponent(parts[parts.length - 1].split('?')[0])
+    }
+  }
+  return null
+}
+
+// Get files for an activity
+router.get('/:id/files', async (req, res) => {
+  try {
+    const { data: files, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('activity_id', req.params.id)
+
+    if (error) throw error
+
+    // Generate signed URLs for all files stored in Supabase Storage
+    const filesWithUrls = await Promise.all(
+      (files || []).map(async (file) => {
+        const storagePath = extractStoragePath(file.file_url)
+        if (storagePath) {
+          try {
+            const { data: signedData, error: signedError } = await supabase.storage
+              .from('activities')
+              .createSignedUrl(storagePath, 3600) // 1 hour
+
+            if (!signedError && signedData?.signedUrl) {
+              return { ...file, file_url: signedData.signedUrl }
+            }
+          } catch (urlErr) {
+            console.warn(`Signed URL failed for ${storagePath}:`, urlErr.message)
+          }
+        }
+        // Fallback: return original URL (works if bucket is public)
+        return file
+      })
+    )
+
+    res.json(filesWithUrls)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+// Create file for an activity
+router.post('/:id/files', async (req, res) => {
+  try {
+    const { file_name, file_url, file_type } = req.body
+    
+    // Defensive check constraint compatibility fallback
+    let dbFileType = file_type.toLowerCase()
+    if (dbFileType === 'webp') {
+      dbFileType = 'png'
+    } else if (!['jpg', 'jpeg', 'png', 'pdf'].includes(dbFileType)) {
+      dbFileType = 'pdf'
+    }
+
+    const { data, error } = await supabase
+      .from('files')
+      .insert([
+        {
+          activity_id: req.params.id,
+          file_name,
+          file_url,
+          file_type: dbFileType
+        }
+      ])
+      .select()
+      .single()
+
+    if (error) throw error
+    res.status(201).json(data)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+// Delete file by ID
+router.delete('/files/:fileId', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('files')
+      .delete()
+      .eq('id', req.params.fileId)
+      .select()
+      .single()
+
+    if (error) throw error
+    res.json({ message: 'File deleted successfully', data })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+// Delete file from Supabase Storage (called by frontend instead of direct storage access)
+router.delete('/:id/storage', async (req, res) => {
+  try {
+    let { storagePath, fileUrl } = req.body
+    
+    // If a full URL is passed, extract the storage path from it
+    if (!storagePath && fileUrl) {
+      storagePath = extractStoragePath(fileUrl)
+    }
+    
+    if (!storagePath) {
+      return res.status(400).json({ error: 'storagePath or fileUrl is required' })
+    }
+
+    const { error } = await supabase.storage
+      .from('activities')
+      .remove([storagePath])
+
+    if (error) {
+      console.warn('Storage delete warning:', error.message)
+      // Don't throw — the file might already be gone
+    }
+
+    res.json({ message: 'Storage file deleted' })
+  } catch (error) {
+    console.error('Storage delete error:', error)
+    res.status(400).json({ error: error.message })
+  }
+})
+
 // Upload file
-router.post('/:id/upload', async (req, res) => {
+router.post('/:id/upload', upload.single('file'), async (req, res) => {
   try {
     const activityId = req.params.id
-    // File upload logic would go here with multer
-    res.json({ message: 'File upload endpoint' })
+    const file = req.file
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+
+    const ext = file.originalname.split('.').pop().toLowerCase()
+    const fileName = `${activityId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${ext}`
+    
+    // Upload file buffer to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('activities')
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        cacheControl: '3600',
+        upsert: true
+      })
+
+    if (uploadError) throw uploadError
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage.from('activities').getPublicUrl(fileName)
+
+    // Sanitize file type for db constraint compatibility
+    let dbFileType = ext
+    if (dbFileType === 'webp') {
+      dbFileType = 'png'
+    } else if (!['jpg', 'jpeg', 'png', 'pdf'].includes(dbFileType)) {
+      dbFileType = 'pdf'
+    }
+
+    // Insert into files table
+    const { data: fileRecord, error: insertError } = await supabase
+      .from('files')
+      .insert([
+        {
+          activity_id: activityId,
+          file_name: file.originalname,
+          file_url: publicUrl,
+          file_type: dbFileType
+        }
+      ])
+      .select()
+      .single()
+
+    if (insertError) throw insertError
+
+    res.status(201).json(fileRecord)
   } catch (error) {
+    console.error('Upload error:', error)
     res.status(400).json({ error: error.message })
   }
 })

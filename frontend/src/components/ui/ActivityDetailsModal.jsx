@@ -1,31 +1,37 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../services/supabase'
+import { api } from '../../services/api'
 import { Modal } from './Modal'
 import { Badge } from './Badge'
 import { Button } from './Button'
 import { 
   Calendar, MapPin, ClipboardList, User, Phone, 
-  FileText, ExternalLink, Download, Clock, MessageSquare 
+  FileText, ExternalLink, Download, Clock, MessageSquare,
+  Image, AlertCircle
 } from 'lucide-react'
 
 export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
   const [files, setFiles] = useState([])
   const [evaluations, setEvaluations] = useState([])
   const [loading, setLoading] = useState(false)
+  const [filesError, setFilesError] = useState(null)
+  const [showPdfViewer, setShowPdfViewer] = useState(false)
 
   useEffect(() => {
     if (!activity || !isOpen) return
 
     const fetchDetails = async () => {
       setLoading(true)
+      setFilesError(null)
       try {
-        // 1. Fetch associated files (photos and reports)
-        const { data: filesData, error: filesError } = await supabase
-          .from('files')
-          .select('*')
-          .eq('activity_id', activity.id)
-        
-        if (filesError) throw filesError
+        // 1. Fetch associated files (photos and reports) via backend API
+        let filesData = []
+        try {
+          filesData = await api.getActivityFiles(activity.id)
+        } catch (fileErr) {
+          console.error('Error fetching activity files:', fileErr)
+          setFilesError('Could not load attachments.')
+        }
         setFiles(filesData || [])
 
         // 2. Fetch associated evaluations (remarks, evaluator info)
@@ -47,16 +53,35 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
     fetchDetails()
   }, [activity, isOpen])
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setShowPdfViewer(false)
+    }
+  }, [isOpen])
+
   if (!activity) return null
 
-  // Group files by type
-  const photos = files.filter(f => ['jpg', 'jpeg', 'png', 'webp'].includes(f.file_type.toLowerCase()))
-  const pdfReport = files.find(f => f.file_type.toLowerCase() === 'pdf')
+  // Group files by type — backend maps webp→png so all image types end up as jpg/jpeg/png in DB
+  const photos = files.filter(f => {
+    const ft = (f.file_type || '').toLowerCase()
+    return ['jpg', 'jpeg', 'png', 'webp'].includes(ft)
+  })
+  const pdfReport = files.find(f => (f.file_type || '').toLowerCase() === 'pdf')
 
   // Date formatting helpers
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+  }
+
+  // Image error fallback handler
+  const handleImageError = (e) => {
+    e.target.onerror = null
+    e.target.style.display = 'none'
+    // Show a fallback element
+    const fallback = e.target.nextElementSibling
+    if (fallback) fallback.style.display = 'flex'
   }
 
   return (
@@ -144,13 +169,21 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
                 </div>
               </div>
 
+              {/* Files Error State */}
+              {filesError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-sm text-red-700">
+                  <AlertCircle size={18} className="flex-shrink-0" />
+                  <span className="font-medium">{filesError}</span>
+                </div>
+              )}
+
               {/* Supporting Evidence Photos Gallery */}
-              {photos.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                    <FileText size={14} />
-                    Project Photo Evidence ({photos.length})
-                  </h3>
+              <div>
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Image size={14} />
+                  Project Photo Evidence ({photos.length})
+                </h3>
+                {photos.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {photos.map((p) => (
                       <a 
@@ -158,17 +191,32 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
                         href={p.file_url} 
                         target="_blank" 
                         rel="noreferrer"
-                        className="relative group aspect-square rounded-xl overflow-hidden border border-surface-border hover:border-brand/40 shadow-sm transition-all"
+                        className="relative group aspect-square rounded-xl overflow-hidden border border-surface-border hover:border-brand/40 shadow-sm transition-all bg-gray-100"
                       >
-                        <img src={p.file_url} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300" alt="Evidence" />
+                        <img 
+                          src={p.file_url} 
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300" 
+                          alt={p.file_name || 'Evidence'} 
+                          onError={handleImageError}
+                        />
+                        {/* Image load error fallback */}
+                        <div className="absolute inset-0 items-center justify-center flex-col gap-2 text-gray-400" style={{ display: 'none' }}>
+                          <Image size={24} />
+                          <span className="text-[10px] font-semibold">Unable to load</span>
+                        </div>
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
                           <ExternalLink size={16} />
                         </div>
                       </a>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : !filesError && (
+                  <div className="p-4 bg-gray-50 border border-dashed border-gray-200 rounded-xl text-center text-xs text-text-muted font-medium py-6 flex flex-col items-center gap-1.5">
+                    <Image size={16} />
+                    No photos were uploaded for this activity.
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right Column: PDF Report, Leadership, Status Feed */}
@@ -207,6 +255,22 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
                         <Download size={12} />
                       </a>
                     </div>
+                    {/* Inline PDF Preview Toggle */}
+                    <button
+                      onClick={() => setShowPdfViewer(!showPdfViewer)}
+                      className="text-[10px] font-bold text-brand hover:text-brand/80 uppercase tracking-wider text-center transition-colors"
+                    >
+                      {showPdfViewer ? '▲ Hide Preview' : '▼ Show Preview'}
+                    </button>
+                    {showPdfViewer && (
+                      <div className="mt-1 rounded-lg overflow-hidden border border-gray-200 bg-white">
+                        <iframe
+                          src={pdfReport.file_url}
+                          title="PDF Preview"
+                          className="w-full h-[400px] border-0"
+                        />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="p-4 bg-gray-50 border border-dashed border-gray-200 rounded-xl text-center text-xs text-text-muted font-medium py-6">

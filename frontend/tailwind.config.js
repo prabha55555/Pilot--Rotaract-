@@ -8,9 +8,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        outfit: ['Outfit', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['Geist', 'sans-serif'],
+        outfit: ['Geist', 'sans-serif'],
+        inter: ['Geist', 'sans-serif'],
+        mono: ['Geist Mono', 'monospace'],
       },
       colors: {
         // Concept B: Restricted blue usage, focusing on whites/grays

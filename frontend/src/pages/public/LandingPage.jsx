@@ -15,7 +15,7 @@ export default function LandingPage() {
           <img src={logo} alt="PILOT" className="h-8 w-auto" />
           <Link to="/login">
             <Button variant="secondary" className="px-6 rounded-full shadow-soft">
-              Sign In
+              Sign In      
             </Button>
           </Link>
         </div>

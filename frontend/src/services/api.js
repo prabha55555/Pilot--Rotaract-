@@ -1,9 +1,14 @@
 const API_BASE_URL = '/api'
 
 const apiCall = async (endpoint, options = {}) => {
+  const headers = {}
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
-      'Content-Type': 'application/json',
+      ...headers,
       ...options.headers,
     },
     ...options,
@@ -85,6 +90,25 @@ export const api = {
     }),
 
   getActivity: (activityId) => apiCall(`/activities/${activityId}`),
+
+  getActivityFiles: (activityId) => apiCall(`/activities/${activityId}/files`),
+
+  createActivityFile: (activityId, fileData) =>
+    apiCall(`/activities/${activityId}/files`, {
+      method: 'POST',
+      body: JSON.stringify(fileData),
+    }),
+
+  deleteActivityFile: (fileId) =>
+    apiCall(`/activities/files/${fileId}`, {
+      method: 'DELETE',
+    }),
+
+  deleteStorageFile: (activityId, fileUrl) =>
+    apiCall(`/activities/${activityId}/storage`, {
+      method: 'DELETE',
+      body: JSON.stringify({ fileUrl }),
+    }),
 
   listActivities: (userId = null, status = null) => {
     let query = '/activities'

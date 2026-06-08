@@ -146,12 +146,7 @@ export default function ActivitiesPage() {
     
     // Fetch associated files
     try {
-      const { data: filesData, error } = await supabase
-        .from('files')
-        .select('*')
-        .eq('activity_id', activity.id)
-
-      if (error) throw error
+      const filesData = await api.getActivityFiles(activity.id)
       const oldPhotos = filesData?.filter(f => ['jpg', 'jpeg', 'png', 'webp'].includes(f.file_type.toLowerCase())) || []
       const oldPdf = filesData?.find(f => f.file_type.toLowerCase() === 'pdf') || null
 
@@ -168,15 +163,12 @@ export default function ActivitiesPage() {
   const handleDeleteActivity = async (id) => {
     if (!window.confirm('Are you sure you want to delete this activity submission?')) return
     try {
-      // Fetch and delete files associated
-      const { data: filesData } = await supabase.from('files').select('*').eq('activity_id', id)
+      // Fetch and delete files from storage via backend
+      const filesData = await api.getActivityFiles(id)
       if (filesData) {
         for (const fileItem of filesData) {
-          const pathParts = fileItem.file_url.split('/activities/')
-          if (pathParts.length > 1) {
-            const storagePath = decodeURIComponent(pathParts[1])
-            await supabase.storage.from('activities').remove([storagePath])
-          }
+          // The backend handles extracting storage path and deleting from storage
+          await api.deleteStorageFile(id, fileItem.file_url).catch(() => {})
         }
       }
 
@@ -283,23 +275,15 @@ export default function ActivitiesPage() {
 
     setSubmitting(true)
     try {
-      // 1. Delete files marked for deletion
+      // 1. Delete files marked for deletion (via backend)
       for (const p of photosToDelete) {
-        const pathParts = p.file_url.split('/activities/')
-        if (pathParts.length > 1) {
-          const storagePath = decodeURIComponent(pathParts[1])
-          await supabase.storage.from('activities').remove([storagePath])
-        }
-        await supabase.from('files').delete().eq('id', p.id)
+        await api.deleteStorageFile(editingActivity.id, p.file_url).catch(() => {})
+        await api.deleteActivityFile(p.id)
       }
 
       if (pdfToDelete) {
-        const pathParts = pdfToDelete.file_url.split('/activities/')
-        if (pathParts.length > 1) {
-          const storagePath = decodeURIComponent(pathParts[1])
-          await supabase.storage.from('activities').remove([storagePath])
-        }
-        await supabase.from('files').delete().eq('id', pdfToDelete.id)
+        await api.deleteStorageFile(editingActivity.id, pdfToDelete.file_url).catch(() => {})
+        await api.deleteActivityFile(pdfToDelete.id)
       }
 
       // 2. Save/Update activity meta
@@ -330,54 +314,12 @@ export default function ActivitiesPage() {
 
       // 3. Upload new photos
       for (const p of photos) {
-        const ext = p.name.split('.').pop().toLowerCase()
-        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${ext}`
-        
-        let fileUrl = ''
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('activities')
-          .upload(fileName, p, { cacheControl: '3600', upsert: true })
-
-        if (uploadError) {
-          console.warn('Storage upload failed, using local fallback:', uploadError.message)
-          fileUrl = `https://mock.storage.local/proofs/${fileName}`
-        } else {
-          const { data: { publicUrl } } = supabase.storage.from('activities').getPublicUrl(fileName)
-          fileUrl = publicUrl
-        }
-
-        await supabase.from('files').insert({
-          activity_id: resultActivity.id,
-          file_name: p.name,
-          file_url: fileUrl,
-          file_type: ext
-        })
+        await api.uploadFile(resultActivity.id, p)
       }
 
       // 4. Upload new PDF report
       if (pdfReport) {
-        const ext = 'pdf'
-        const fileName = `${user.id}/${Date.now()}-report.${ext}`
-        
-        let fileUrl = ''
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('activities')
-          .upload(fileName, pdfReport, { cacheControl: '3600', upsert: true })
-
-        if (uploadError) {
-          console.warn('PDF upload failed, using local fallback:', uploadError.message)
-          fileUrl = `https://mock.storage.local/proofs/${fileName}`
-        } else {
-          const { data: { publicUrl } } = supabase.storage.from('activities').getPublicUrl(fileName)
-          fileUrl = publicUrl
-        }
-
-        await supabase.from('files').insert({
-          activity_id: resultActivity.id,
-          file_name: pdfReport.name,
-          file_url: fileUrl,
-          file_type: ext
-        })
+        await api.uploadFile(resultActivity.id, pdfReport)
       }
 
       setIsModalOpen(false)
