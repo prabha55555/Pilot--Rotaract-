@@ -5,21 +5,22 @@ import { LogOut, ChevronDown, Bell, User, Settings } from 'lucide-react'
 import logo from '../../utils/logo.png'
 
 export const Navbar = () => {
-  const { user, userRole, logout, isAuthenticated } = useAuth()
+  const { 
+    user, 
+    userRole, 
+    logout, 
+    isAuthenticated,
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead
+  } = useAuth()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
 
   const dropdownRef = useRef(null)
   const notifRef = useRef(null)
-
-  // Dummy notifications
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Welcome to PILOT!', desc: 'Complete your profile setup.', time: 'Just now', unread: true },
-    { id: 2, title: 'Evaluation Pending', desc: 'A new candidate requires review.', time: '1 hour ago', unread: true },
-  ])
-
-  const unreadCount = notifications.filter(n => n.unread).length
 
   // Close dropdowns on outside clicks
   useEffect(() => {
@@ -39,10 +40,6 @@ export const Navbar = () => {
     setDropdownOpen(false)
     await logout()
     navigate('/login')
-  }
-
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, unread: false })))
   }
 
   return (
@@ -79,7 +76,7 @@ export const Navbar = () => {
                     <span className="font-semibold text-text-main font-outfit">Notifications</span>
                     {unreadCount > 0 && (
                       <button 
-                        onClick={markAllRead}
+                        onClick={markAllAsRead}
                         className="text-xs text-brand font-medium hover:underline"
                       >
                         Mark all as read
@@ -88,17 +85,22 @@ export const Navbar = () => {
                   </div>
                   <div className="max-h-64 overflow-y-auto divide-y divide-surface-border">
                     {notifications.length > 0 ? (
-                      notifications.map(notif => (
+                      notifications.slice(0, 10).map(notif => (
                         <div 
                           key={notif.id} 
-                          className={`p-4 hover:bg-surface-muted transition-colors ${notif.unread ? 'bg-brand-light/30' : ''}`}
+                          className={`p-4 hover:bg-surface-muted transition-colors cursor-pointer ${!notif.is_read ? 'bg-brand-light/30' : ''}`}
+                          onClick={() => {
+                            if (!notif.is_read) markAsRead(notif.id)
+                          }}
                         >
                           <div className="flex items-start gap-3">
-                            {notif.unread && <div className="mt-1.5 h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
-                            <div>
-                              <p className={`text-sm font-medium ${notif.unread ? 'text-text-main' : 'text-text-muted'}`}>{notif.title}</p>
-                              <p className="text-xs text-text-muted mt-0.5">{notif.desc}</p>
-                              <span className="text-[10px] text-text-light font-medium block mt-1">{notif.time}</span>
+                            {!notif.is_read && <div className="mt-1.5 h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${!notif.is_read ? 'text-text-main font-semibold' : 'text-text-muted'}`}>{notif.title}</p>
+                              <p className="text-xs text-text-muted mt-0.5 break-words">{notif.message}</p>
+                              <span className="text-[10px] text-text-light font-medium block mt-1">
+                                {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -108,6 +110,17 @@ export const Navbar = () => {
                         No notifications yet.
                       </div>
                     )}
+                  </div>
+                  <div className="p-2 border-t border-surface-border text-center bg-surface-muted/30">
+                    <button 
+                      onClick={() => {
+                        setNotifOpen(false)
+                        navigate('/notifications')
+                      }}
+                      className="text-xs text-brand font-semibold hover:underline w-full"
+                    >
+                      View all notifications
+                    </button>
                   </div>
                 </div>
               )}

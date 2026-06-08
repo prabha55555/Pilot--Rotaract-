@@ -20,6 +20,7 @@ import ProfilePage from './pages/protected/ProfilePage'
 import SettingsPage from './pages/protected/SettingsPage'
 import UserManagementPage from './pages/protected/UserManagementPage'
 import PromotionsPage from './pages/protected/PromotionsPage'
+import NotificationsPage from './pages/protected/NotificationsPage'
 
 // Protected Route Wrapper
 import { ProtectedLayout } from './components/layout/ProtectedLayout'
@@ -132,6 +133,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <PromotionsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
             </ProtectedRoute>
           }
         />

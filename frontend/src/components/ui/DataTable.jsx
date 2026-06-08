@@ -13,7 +13,12 @@ export const DataTable = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [currentPageSize, setCurrentPageSize] = useState(pageSize)
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
+
+  React.useEffect(() => {
+    setCurrentPageSize(pageSize)
+  }, [pageSize])
 
   // Sorting logic
   const handleSort = (key) => {
@@ -63,16 +68,22 @@ export const DataTable = ({
   }, [data, searchTerm, searchKey, sortConfig])
 
   // Pagination logic
-  const totalPages = Math.ceil(filteredData.length / pageSize)
+  const totalPages = Math.ceil(filteredData.length / currentPageSize)
   const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return filteredData.slice(start, start + pageSize)
-  }, [filteredData, currentPage, pageSize])
+    const start = (currentPage - 1) * currentPageSize
+    return filteredData.slice(start, start + currentPageSize)
+  }, [filteredData, currentPage, currentPageSize])
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     }
+  }
+
+  const handlePageSizeChange = (e) => {
+    const newSize = parseInt(e.target.value, 10)
+    setCurrentPageSize(newSize)
+    setCurrentPage(1)
   }
 
   // Reset page on search
@@ -94,9 +105,25 @@ export const DataTable = ({
             className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all"
           />
         </div>
-        <div className="text-sm font-medium text-gray-500">
-          Showing {filteredData.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} to{' '}
-          {Math.min(currentPage * pageSize, filteredData.length)} of {filteredData.length} entries
+        <div className="flex items-center gap-3 text-sm font-medium text-gray-500">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-400 font-outfit">Show:</span>
+            <select
+              value={currentPageSize}
+              onChange={handlePageSizeChange}
+              className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-600 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+            >
+              {[10, 25, 50, 100].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            Showing {filteredData.length > 0 ? (currentPage - 1) * currentPageSize + 1 : 0} to{' '}
+            {Math.min(currentPage * currentPageSize, filteredData.length)} of {filteredData.length} entries
+          </div>
         </div>
       </div>
 

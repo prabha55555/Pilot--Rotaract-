@@ -23,6 +23,11 @@ export default function DashboardPage() {
   const [selectedActivity, setSelectedActivity] = useState(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
+  // SuperAdmin activity pagination & promotions pipeline limit
+  const [activitiesPage, setActivitiesPage] = useState(1)
+  const [activitiesPageSize, setActivitiesPageSize] = useState(4)
+  const [promotionsLimit, setPromotionsLimit] = useState(4)
+
   useEffect(() => {
     if (!user) return
 
@@ -155,23 +160,30 @@ export default function DashboardPage() {
             .from('activities')
             .select('*, user:users(name, role, club)')
             .order('created_at', { ascending: false })
-            .limit(5)
+            .limit(100)
 
-          // 3. Pending promotions (passed interviews but still DTD/DT role) - REPLACED WITH JUST PENDING PROMOTIONS TABLE
-          const { data: passedPromotions } = await supabase
-            .from('promotions') // We should adjust this later, but for now we remove interviews
-            .select('*')
-            .limit(0)
+          // 3. Fetch candidates (DTD and DT) for Promotion Pipeline
+          const { data: pipelineUsers } = await supabase
+            .from('users')
+            .select('id, name, role, club')
+            .in('role', ['DTD', 'DT'])
+            .eq('status', 'Active')
+
+          const pending = pipelineUsers?.map(u => ({
+            id: u.id,
+            candidate: u
+          })) || []
 
           setStats({
             superAdminCount,
             adminCount,
             dtCount,
-            dtdCount
+            dtdCount,
+            promotionsPending: pending.length
           })
           setExtraData({
             recentSubmissions: recentSubmissions || [],
-            pendingPromotions: []
+            pendingPromotions: pending
           })
         }
       } catch (error) {
@@ -218,6 +230,19 @@ export default function DashboardPage() {
         <LoadingSpinner size="lg" />
       </div>
     )
+  }
+
+  const recentActivities = extraData.recentSubmissions || []
+  const totalActivitiesPages = Math.ceil(recentActivities.length / activitiesPageSize)
+  
+  const paginatedActivities = recentActivities.slice(
+    (activitiesPage - 1) * activitiesPageSize,
+    (activitiesPage - 1) * activitiesPageSize + activitiesPageSize
+  )
+
+  const handleActivitiesPageSizeChange = (e) => {
+    setActivitiesPageSize(parseInt(e.target.value, 10))
+    setActivitiesPage(1)
   }
 
   const renderDTD = () => (
@@ -506,41 +531,87 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 p-6">
-          <h3 className="text-lg font-semibold text-text-main font-outfit mb-6">Recent System Activities</h3>
-          {extraData.recentSubmissions?.length > 0 ? (
-            <div className="space-y-3">
-              {extraData.recentSubmissions.map((act) => (
-                <div key={act.id} className="p-4 border border-surface-border hover:bg-surface-muted rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
-                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}>
-                    <h4 className="font-semibold text-sm text-text-main hover:text-brand transition-colors">{act.title}</h4>
-                    <p className="text-xs text-text-muted font-medium mt-1">
-                      By: <span className="text-text-main">{act.user?.name}</span> ({act.user?.role}) • {act.user?.club}
-                    </p>
-                    <p className="text-xs text-text-muted mt-1 font-medium">Category: {act.category}</p>
+        <Card className="lg:col-span-2 p-6 flex flex-col justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-text-main font-outfit mb-6">Recent System Activities</h3>
+            {paginatedActivities.length > 0 ? (
+              <div className="space-y-3">
+                {paginatedActivities.map((act) => (
+                  <div key={act.id} className="p-4 border border-surface-border hover:bg-surface-muted rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+                    <div className="flex-1 cursor-pointer" onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}>
+                      <h4 className="font-semibold text-sm text-text-main hover:text-brand transition-colors">{act.title}</h4>
+                      <p className="text-xs text-text-muted font-medium mt-1">
+                        By: <span className="text-text-main">{act.user?.name}</span> ({act.user?.role}) • {act.user?.club}
+                      </p>
+                      <p className="text-xs text-text-muted mt-1 font-medium">Category: {act.category}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}
+                        className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
+                        title="View Details"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <Badge variant={
+                        act.status === 'Approved' ? 'success' : 
+                        act.status === 'Rejected' ? 'error' : 
+                        act.status === 'Submitted' ? 'warning' : 'default'
+                      }>
+                        {act.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}
-                      className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
-                      title="View Details"
-                    >
-                      <Eye size={14} />
-                    </button>
-                    <Badge variant={
-                      act.status === 'Approved' ? 'success' : 
-                      act.status === 'Rejected' ? 'error' : 
-                      act.status === 'Submitted' ? 'warning' : 'default'
-                    }>
-                      {act.status}
-                    </Badge>
-                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-10 text-center text-text-muted font-medium text-sm">
+                No recent submissions found.
+              </div>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          {recentActivities.length > 0 && (
+            <div className="mt-6 pt-4 border-t border-surface-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-2 text-xs text-text-muted font-medium">
+                <span>Show:</span>
+                <select
+                  value={activitiesPageSize}
+                  onChange={handleActivitiesPageSizeChange}
+                  className="bg-surface-muted border border-surface-border rounded-lg px-2 py-1 text-xs text-text-main focus:outline-none focus:border-brand cursor-pointer"
+                >
+                  {[4, 10, 25, 50].map((size) => (
+                    <option key={size} value={size}>
+                      {size} records
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {totalActivitiesPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={activitiesPage === 1}
+                    onClick={() => setActivitiesPage(p => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs text-text-muted font-semibold font-outfit">
+                    Page {activitiesPage} of {totalActivitiesPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={activitiesPage === totalActivitiesPages}
+                    onClick={() => setActivitiesPage(p => Math.min(totalActivitiesPages, p + 1))}
+                  >
+                    Next
+                  </Button>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-10 text-center text-text-muted font-medium text-sm">
-              No recent submissions found.
+              )}
             </div>
           )}
         </Card>
@@ -558,7 +629,7 @@ export default function DashboardPage() {
             
             {extraData.pendingPromotions?.length > 0 ? (
               <div className="space-y-3">
-                {extraData.pendingPromotions.map((promo) => (
+                {extraData.pendingPromotions.slice(0, promotionsLimit).map((promo) => (
                   <div key={promo.id} className="p-4 bg-surface-muted border border-surface-border rounded-xl flex flex-col gap-3">
                     <div>
                       <h4 className="font-semibold text-sm text-text-main">{promo.candidate?.name}</h4>
@@ -574,6 +645,30 @@ export default function DashboardPage() {
                     </Button>
                   </div>
                 ))}
+
+                {/* Show More / Show Less Controls */}
+                <div className="flex gap-2 pt-2">
+                  {promotionsLimit < extraData.pendingPromotions.length && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      fullWidth
+                      onClick={() => setPromotionsLimit(prev => prev + 4)}
+                    >
+                      Show More
+                    </Button>
+                  )}
+                  {promotionsLimit > 4 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      fullWidth
+                      onClick={() => setPromotionsLimit(4)}
+                    >
+                      Show Less
+                    </Button>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="py-8 text-center text-text-muted font-medium text-sm leading-relaxed">

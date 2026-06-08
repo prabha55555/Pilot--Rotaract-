@@ -5,7 +5,7 @@ import { Navbar } from './Navbar'
 import { LoadingSpinner } from '../ui/LoadingSpinner'
 
 export const ProtectedLayout = ({ children }) => {
-  const { loading } = useAuth()
+  const { loading, toasts, removeToast } = useAuth()
 
   if (loading) {
     return (
@@ -31,6 +31,23 @@ export const ProtectedLayout = ({ children }) => {
             {children}
           </div>
         </main>
+      </div>
+
+      {/* Realtime Toast Stack Container */}
+      <div className="fixed top-20 right-6 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+        {toasts.map(t => (
+          <div
+            key={t.id}
+            onClick={() => removeToast(t.id)}
+            className="pointer-events-auto flex items-start gap-3 p-4 bg-zinc-900/95 backdrop-blur text-white rounded-xl shadow-floating border border-zinc-800 cursor-pointer hover:bg-zinc-800 transition-all"
+          >
+            <div className="flex-1">
+              <p className="text-xs font-mono font-semibold tracking-wider text-blue-400 uppercase">{t.title}</p>
+              <p className="text-sm font-semibold mt-1 leading-tight">{t.message}</p>
+              <p className="text-[10px] text-zinc-500 mt-1 font-semibold">Click to dismiss</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

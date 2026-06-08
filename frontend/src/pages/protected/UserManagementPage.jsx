@@ -27,6 +27,7 @@ export default function UserManagementPage() {
   // Form State
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [password, setPassword] = useState('')
   const [club, setClub] = useState('')
   const [role, setRole] = useState('')
   const [batch, setBatch] = useState('')
@@ -62,6 +63,7 @@ export default function UserManagementPage() {
     setEditingUser(null)
     setEmail('')
     setName('')
+    setPassword('')
     setClub('')
     setRole('DTD')
     setBatch(new Date().getFullYear().toString())
@@ -110,6 +112,12 @@ export default function UserManagementPage() {
       DT: 'Admin',
       Admin: 'SuperAdmin'
     }
+
+    if (userRole === 'Admin' && user.role !== 'DTD') {
+      showToast('Admins are only allowed to promote DTD to DT.', 'error')
+      return
+    }
+
     const nextRole = nextRoleMap[user.role]
     if (!nextRole) {
       showToast('This user is already at the maximum role', 'warning')
@@ -130,14 +138,22 @@ export default function UserManagementPage() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault()
-    if (!email || !name || !role) {
+    if (!email || !name || !role || (!editingUser && !password)) {
       showToast('Please fill in all required fields', 'error')
       return
     }
 
     setSubmitting(true)
     try {
-      const userData = { email, name, club, role, batch, phone }
+      const userData = { 
+        email, 
+        name, 
+        club, 
+        role, 
+        batch, 
+        phone,
+        ...(editingUser ? {} : { password })
+      }
       
       if (editingUser) {
         await api.updateUser(editingUser.id, userData)
@@ -222,17 +238,24 @@ export default function UserManagementPage() {
         }
         
         const isSuperAdmin = userRole === 'SuperAdmin'
+        const isAdmin = userRole === 'Admin'
+        
+        // Admins can only modify/deactivate DTD and DT
+        const canModify = isSuperAdmin || (isAdmin && (row.role === 'DTD' || row.role === 'DT'))
+        const canPromote = (isSuperAdmin && row.role !== 'SuperAdmin') || (isAdmin && row.role === 'DTD')
 
         return (
           <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => handleOpenEditModal(row)}
-              title="Edit User"
-              className="p-2 bg-brand-light text-brand hover:bg-brand hover:text-white rounded-lg transition-all"
-            >
-              <Edit2 size={13} className="stroke-[2.5]" />
-            </button>
-            {isSuperAdmin && row.status === 'Active' && row.role !== 'SuperAdmin' && (
+            {canModify && (
+              <button
+                onClick={() => handleOpenEditModal(row)}
+                title="Edit User"
+                className="p-2 bg-brand-light text-brand hover:bg-brand hover:text-white rounded-lg transition-all"
+              >
+                <Edit2 size={13} className="stroke-[2.5]" />
+              </button>
+            )}
+            {canPromote && row.status === 'Active' && (
               <button
                 onClick={() => handlePromote(row)}
                 title="Promote Role"
@@ -241,7 +264,7 @@ export default function UserManagementPage() {
                 <ArrowUp size={13} className="stroke-[2.5]" />
               </button>
             )}
-            {row.status === 'Active' && (
+            {canModify && row.status === 'Active' && (
               <button
                 onClick={() => handleDeactivate(row.id)}
                 title="Deactivate Account"
@@ -250,7 +273,7 @@ export default function UserManagementPage() {
                 <UserMinus size={13} className="stroke-[2.5]" />
               </button>
             )}
-            {row.status !== 'Archived' && (
+            {canModify && row.status !== 'Archived' && (
               <button
                 onClick={() => handleArchive(row.id)}
                 title="Archive Record"
@@ -370,6 +393,23 @@ export default function UserManagementPage() {
             />
           </div>
 
+          {!editingUser && (
+            <div>
+              <label className="block text-xs font-semibold text-text-muted tracking-wide mb-1.5">
+                Password <span className="text-semantic-error">*</span>
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2.5 bg-surface-muted border border-surface-border rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-brand/30 focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-text-light"
+                placeholder="Enter password (min 6 characters)"
+                required={!editingUser}
+                minLength={6}
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-text-muted tracking-wide mb-1.5">
@@ -410,8 +450,12 @@ export default function UserManagementPage() {
               >
                 <option value="DTD">Deputy Trainer (DTD)</option>
                 <option value="DT">District Trainer (DT)</option>
-                <option value="Admin">Admin</option>
-                <option value="SuperAdmin">SuperAdmin</option>
+                {userRole === 'SuperAdmin' && (
+                  <>
+                    <option value="Admin">Admin</option>
+                    <option value="SuperAdmin">SuperAdmin</option>
+                  </>
+                )}
               </select>
             </div>
             <div>

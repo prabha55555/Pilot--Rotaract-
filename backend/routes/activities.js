@@ -2,6 +2,7 @@ import express from 'express'
 import { supabase } from '../config/supabase.js'
 import { v4 as uuidv4 } from 'uuid'
 import multer from 'multer'
+import { createNotification, notifyRole } from '../utils/notifications.js'
 
 const router = express.Router()
 const upload = multer({ storage: multer.memoryStorage() })
@@ -41,6 +42,22 @@ router.post('/', async (req, res) => {
       .single()
 
     if (error) throw error
+
+    // Send notifications if immediately submitted
+    if (data.status === 'Submitted') {
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', userId)
+        .single()
+      
+      const candidateName = userProfile?.name || 'A candidate'
+      const titleMsg = 'New Activity Submitted'
+      const detailMsg = `${candidateName} submitted a new activity: "${title}"`
+      await notifyRole('DT', titleMsg, detailMsg, 'activity_submitted', data.id)
+      await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', data.id)
+    }
+
     res.status(201).json(data)
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -87,6 +104,17 @@ router.patch('/:id/status', async (req, res) => {
   try {
     const { status } = req.body
 
+    // Fetch activity to get candidate's profile
+    const { data: activity } = await supabase
+      .from('activities')
+      .select('*, user:users(name)')
+      .eq('id', req.params.id)
+      .single()
+
+    if (!activity) {
+      return res.status(404).json({ error: 'Activity not found.' })
+    }
+
     const { data, error } = await supabase
       .from('activities')
       .update({ status, updated_at: new Date().toISOString() })
@@ -95,6 +123,36 @@ router.patch('/:id/status', async (req, res) => {
       .single()
 
     if (error) throw error
+
+    const candidateId = activity.user_id
+    const candidateName = activity.user?.name || 'A candidate'
+
+    if (status === 'Submitted') {
+      const titleMsg = 'Activity Submitted'
+      const detailMsg = `${candidateName} submitted activity: "${activity.title}"`
+      await notifyRole('DT', titleMsg, detailMsg, 'activity_submitted', data.id)
+      await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', data.id)
+    } else if (status === 'Approved') {
+      await createNotification(
+        candidateId,
+        'Activity Approved! 🎉',
+        `Your activity "${activity.title}" has been approved by the evaluation board.`,
+        'activity_approved',
+        data.id
+      )
+      const adminMsg = `Activity "${activity.title}" by ${candidateName} has been approved.`
+      await notifyRole('SuperAdmin', 'Activity Approved', adminMsg, 'activity_approved', data.id)
+      await notifyRole('Admin', 'Activity Approved', adminMsg, 'activity_approved', data.id)
+    } else if (status === 'Rejected') {
+      await createNotification(
+        candidateId,
+        'Activity Action Required ⚠️',
+        `Your activity "${activity.title}" requires revisions or has been rejected.`,
+        'activity_rejected',
+        data.id
+      )
+    }
+
     res.json(data)
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -136,6 +194,24 @@ router.put('/:id', async (req, res) => {
       .single()
 
     if (error) throw error
+
+    // Send notifications if resubmitted
+    if (status === 'Submitted') {
+      const { data: activity } = await supabase
+        .from('activities')
+        .select('*, user:users(name)')
+        .eq('id', req.params.id)
+        .single()
+      
+      if (activity) {
+        const candidateName = activity.user?.name || 'A candidate'
+        const titleMsg = 'Activity Resubmitted'
+        const detailMsg = `${candidateName} resubmitted activity: "${activity.title}"`
+        await notifyRole('DT', titleMsg, detailMsg, 'activity_submitted', activity.id)
+        await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', activity.id)
+      }
+    }
+
     res.json(data)
   } catch (error) {
     res.status(400).json({ error: error.message })

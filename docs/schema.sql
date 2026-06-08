@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS activities (
   title VARCHAR(255) NOT NULL,
   category VARCHAR(100) NOT NULL CHECK (category IN (
     'Event Conducted', 'MC Assignment', 'Training Session', 'Project Participation',
-    'Task Completion', 'Content Creation', 'Club Visit', 'Workshop Facilitation'
+    'Task Completion', 'Content Creation', 'Club Visit', 'Workshop Facilitation',
+    'Workshop', 'Community Service', 'Leadership Development', 'Membership Development',
+    'Public Relations', 'Professional Development', 'Other'
   )),
   description TEXT,
   outcome TEXT,
@@ -151,6 +153,21 @@ CREATE TABLE IF NOT EXISTS documents (
 
 CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category);
 
+-- 10. Notifications
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  related_id UUID,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+
 -- ============================================================
 -- DISABLE Row Level Security (for development — re-enable for production)
 -- ============================================================
@@ -163,3 +180,4 @@ ALTER TABLE promotions         DISABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_timeline  DISABLE ROW LEVEL SECURITY;
 ALTER TABLE leaderboards       DISABLE ROW LEVEL SECURITY;
 ALTER TABLE documents          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications      DISABLE ROW LEVEL SECURITY;

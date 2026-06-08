@@ -1,5 +1,6 @@
 import express from 'express'
 import { supabase } from '../config/supabase.js'
+import { createNotification } from '../utils/notifications.js'
 
 const router = express.Router()
 
@@ -25,6 +26,26 @@ router.post('/', async (req, res) => {
       .single()
 
     if (error) throw error
+
+    // Fetch evaluator's name
+    const { data: evaluator } = await supabase
+      .from('users')
+      .select('name')
+      .eq('id', evaluatorId)
+      .single()
+    
+    const evaluatorName = evaluator?.name || 'A trainer'
+    const statusText = recommendation ? 'Recommended' : 'Needs Review'
+
+    // Notify candidate DTD
+    await createNotification(
+      candidateId,
+      'Evaluation Feedback Received 📝',
+      `You received a new evaluation feedback from ${evaluatorName}. Recommendation: "${statusText}".`,
+      'evaluation_submitted',
+      data.id
+    )
+
     res.status(201).json(data)
   } catch (error) {
     res.status(400).json({ error: error.message })

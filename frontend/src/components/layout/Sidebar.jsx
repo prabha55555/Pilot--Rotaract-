@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { 
   LayoutDashboard, Activity, TrendingUp, FileText, Users,
-  Calendar, Award, FileCheck, Settings, ChevronLeft, ChevronRight 
+  Calendar, Award, FileCheck, Settings, ChevronLeft, ChevronRight, Bell
 } from 'lucide-react'
 
 const roleMenus = {
@@ -12,6 +12,7 @@ const roleMenus = {
     { label: 'Submit Activity', path: '/activities', icon: Activity },
     { label: 'Leaderboard', path: '/leaderboard', icon: TrendingUp },
     { label: 'Evaluations', path: '/evaluations', icon: FileText },
+    { label: 'Notifications', path: '/notifications', icon: Bell },
     { label: 'Profile', path: '/profile', icon: Users },
     { label: 'Settings', path: '/settings', icon: Settings },
   ],
@@ -20,6 +21,7 @@ const roleMenus = {
     { label: 'Evaluate DTD', path: '/evaluate', icon: FileCheck },
     { label: 'Submit Activity', path: '/activities', icon: Activity },
     { label: 'Leaderboard', path: '/leaderboard', icon: TrendingUp },
+    { label: 'Notifications', path: '/notifications', icon: Bell },
     { label: 'Profile', path: '/profile', icon: Users },
     { label: 'Settings', path: '/settings', icon: Settings },
   ],
@@ -28,6 +30,7 @@ const roleMenus = {
     { label: 'Evaluate DT', path: '/evaluate', icon: FileCheck },
     { label: 'Monitor DTD', path: '/users', icon: Users },
     { label: 'Reports', path: '/reports', icon: FileText },
+    { label: 'Notifications', path: '/notifications', icon: Bell },
     { label: 'Settings', path: '/settings', icon: Settings },
   ],
   SuperAdmin: [
@@ -35,6 +38,7 @@ const roleMenus = {
     { label: 'User Management', path: '/users', icon: Users },
     { label: 'Promotions', path: '/promotions', icon: Award },
     { label: 'Reports', path: '/reports', icon: FileText },
+    { label: 'Notifications', path: '/notifications', icon: Bell },
     { label: 'Settings', path: '/settings', icon: Settings },
   ],
 }
