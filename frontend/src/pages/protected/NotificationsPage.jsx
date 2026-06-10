@@ -12,6 +12,7 @@ import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Toast } from '../../components/ui/Toast'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { formatIST } from '../../utils/date'
 
 export default function NotificationsPage() {
   const { user, fetchNotifications: syncNavbarNotifications } = useAuth()
@@ -159,7 +160,7 @@ export default function NotificationsPage() {
       sortable: true,
       render: (row) => (
         <span className="text-xs font-semibold text-text-muted">
-          {new Date(row.created_at).toLocaleString()}
+          {formatIST(row.created_at)}
         </span>
       )
     },

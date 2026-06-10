@@ -5,6 +5,20 @@ import { createNotification, notifyRole } from '../utils/notifications.js'
 
 const router = express.Router()
 
+const isColumnMissingError = (err) => {
+  if (!err) return false
+  const msg = err.message || ''
+  const code = err.code || ''
+  const hint = err.hint || ''
+  return (
+    code === '42703' || 
+    msg.includes('column') || 
+    msg.includes('action_type') || 
+    msg.includes('schema cache') || 
+    hint.includes('action_type')
+  )
+}
+
 // Get all users
 router.get('/', async (req, res) => {
   try {
@@ -175,6 +189,8 @@ router.patch('/:id/promote', authMiddleware, async (req, res) => {
     const promoterRole = req.user?.role
     const promoterId = req.user?.id
 
+    console.log('🔄 [promote route] promoterRole:', promoterRole, 'promoterId:', promoterId, 'candidateId:', userId, 'requested newRole:', newRole)
+
     if (promoterRole !== 'SuperAdmin' && promoterRole !== 'Admin') {
       return res.status(403).json({ error: 'Only administrators can promote users.' })
     }
@@ -185,6 +201,8 @@ router.patch('/:id/promote', authMiddleware, async (req, res) => {
       .select('*')
       .eq('id', userId)
       .single()
+
+    console.log('🔄 [promote route] candidate fetched:', candidate, 'fetchError:', fetchError)
 
     if (fetchError || !candidate) {
       return res.status(404).json({ error: 'Candidate not found.' })
@@ -206,21 +224,35 @@ router.patch('/:id/promote', authMiddleware, async (req, res) => {
       .single()
 
     if (userError) throw userError
-
     // Record promotion
-    const { data: promotionData, error: promotionError } = await supabase
+    const promoRecord = {
+      user_id: userId,
+      old_role: candidate.role,
+      new_role: newRole,
+      promoted_by: promoterId || 'abc55e97-99d1-43d2-9585-18e28283c620',
+      promoted_at: new Date().toISOString(),
+    }
+
+    let promotionData, promotionError
+    const { data: dataWithAction, error: errWithAction } = await supabase
       .from('promotions')
-      .insert([
-        {
-          user_id: userId,
-          old_role: candidate.role,
-          new_role: newRole,
-          promoted_by: promoterId || 'abc55e97-99d1-43d2-9585-18e28283c620',
-          promoted_at: new Date().toISOString(),
-        },
-      ])
+      .insert([{ ...promoRecord, action_type: 'Promotion' }])
       .select()
       .single()
+
+    if (errWithAction && isColumnMissingError(errWithAction)) {
+      const { data: dataNoAction, error: errNoAction } = await supabase
+        .from('promotions')
+        .insert([promoRecord])
+        .select()
+        .single()
+      
+      promotionData = dataNoAction
+      promotionError = errNoAction
+    } else {
+      promotionData = dataWithAction
+      promotionError = errWithAction
+    }
 
     if (promotionError) throw promotionError
 
@@ -238,6 +270,138 @@ router.patch('/:id/promote', authMiddleware, async (req, res) => {
     await notifyRole('Admin', 'Trainer Promoted', auditMsg, 'role_change', promotionData.id)
 
     res.json({ user: userData, promotion: promotionData })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+// Revert user promotion
+router.post('/:id/revert', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.params.id
+    const promoterRole = req.user?.role
+    const promoterId = req.user?.id
+
+    if (promoterRole !== 'SuperAdmin') {
+      return res.status(403).json({ error: 'Only Super Admins are authorized to revert promotions.' })
+    }
+
+    // Fetch candidate profile
+    const { data: candidate, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (fetchError || !candidate) {
+      return res.status(404).json({ error: 'Candidate not found.' })
+    }
+
+    // Find the latest promotion record for this candidate
+    // where new_role matches the candidate's current role
+    let lastPromo, promoError
+    const { data: promoWithAction, error: errWithAction } = await supabase
+      .from('promotions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('new_role', candidate.role)
+      .eq('action_type', 'Promotion')
+      .order('promoted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (errWithAction && isColumnMissingError(errWithAction)) {
+      const { data: promoNoAction, error: errNoAction } = await supabase
+        .from('promotions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('new_role', candidate.role)
+        .order('promoted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      lastPromo = promoNoAction
+      promoError = errNoAction
+    } else {
+      lastPromo = promoWithAction
+      promoError = errWithAction
+    }
+
+    if (promoError) throw promoError
+
+    const previousRole = lastPromo
+      ? lastPromo.old_role
+      : (candidate.role === 'SuperAdmin' ? 'Admin' :
+         candidate.role === 'Admin' ? 'DT' :
+         candidate.role === 'DT' ? 'DTD' : null)
+
+    if (!previousRole) {
+      return res.status(400).json({ error: 'No promotion history found to revert for this role.' })
+    }
+
+    // If reverting to DTD, status goes back to 'Active', otherwise remains 'Promoted'
+    const newStatus = previousRole === 'DTD' ? 'Active' : 'Promoted'
+
+    // Update user role and status
+    const { data: userData, error: userUpdateError } = await supabase
+      .from('users')
+      .update({
+        role: previousRole,
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (userUpdateError) throw userUpdateError
+
+    // Record reversion in promotions table
+    const reversionRecord = {
+      user_id: userId,
+      old_role: candidate.role,
+      new_role: previousRole,
+      promoted_by: promoterId,
+      promoted_at: new Date().toISOString(),
+    }
+
+    let reversionData, reversionError
+    const { data: revWithAction, error: revErrWithAction } = await supabase
+      .from('promotions')
+      .insert([{ ...reversionRecord, action_type: 'Reversion' }])
+      .select()
+      .single()
+
+    if (revErrWithAction && isColumnMissingError(revErrWithAction)) {
+      const { data: revNoAction, error: revErrNoAction } = await supabase
+        .from('promotions')
+        .insert([reversionRecord])
+        .select()
+        .single()
+      
+      reversionData = revNoAction
+      reversionError = revErrNoAction
+    } else {
+      reversionData = revWithAction
+      reversionError = revErrWithAction
+    }
+
+    if (reversionError) throw reversionError
+
+    // Send notifications
+    await createNotification(
+      userId,
+      'Role Reverted ⚠️',
+      `Your role has been reverted from ${candidate.role} to ${previousRole} by the Super Admin.`,
+      'role_reversion',
+      reversionData.id
+    )
+
+    const auditMsg = `Rtr. ${userData.name}'s role was reverted from ${candidate.role} to ${previousRole} by Super Admin ${req.user?.email || 'system'}.`
+    await notifyRole('SuperAdmin', 'Trainer Role Reverted', auditMsg, 'role_reversion', reversionData.id)
+    await notifyRole('Admin', 'Trainer Role Reverted', auditMsg, 'role_reversion', reversionData.id)
+
+    res.json({ user: userData, reversion: reversionData })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }

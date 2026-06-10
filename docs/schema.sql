@@ -104,8 +104,14 @@ CREATE TABLE IF NOT EXISTS promotions (
   new_role VARCHAR(20) NOT NULL,
   promoted_by UUID REFERENCES users(id),
   promoted_at TIMESTAMP NOT NULL,
+  action_type VARCHAR(50) NOT NULL DEFAULT 'Promotion' CHECK (action_type IN ('Promotion', 'Reversion')),
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Enable replication for users table to support realtime updates
+-- Run this in the Supabase SQL editor:
+-- ALTER TABLE users REPLICA IDENTITY FULL;
+-- ALTER PUBLICATION supabase_realtime ADD TABLE users;
 
 CREATE INDEX IF NOT EXISTS idx_promotions_user_id ON promotions(user_id);
 CREATE INDEX IF NOT EXISTS idx_promotions_promoted_at ON promotions(promoted_at);

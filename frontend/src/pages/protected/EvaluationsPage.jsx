@@ -16,6 +16,7 @@ import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { ActivityDetailsModal } from '../../components/ui/ActivityDetailsModal'
+import { formatDateIST, formatIST } from '../../utils/date'
 
 export default function EvaluationsPage() {
   const { user, userRole } = useAuth()
@@ -238,7 +239,7 @@ export default function EvaluationsPage() {
     { 
       header: 'Date Submitted', 
       accessor: 'created_at', 
-      render: (row) => <span className="text-xs text-text-muted font-medium">{new Date(row.created_at).toLocaleDateString()}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
     },
     {
       header: 'Actions',
@@ -294,7 +295,7 @@ export default function EvaluationsPage() {
     { 
       header: 'Date Evaluated', 
       accessor: 'created_at', 
-      render: (row) => <span className="text-xs text-text-muted font-medium">{new Date(row.created_at).toLocaleDateString()}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
     },
     {
       header: 'Actions',
@@ -519,7 +520,7 @@ export default function EvaluationsPage() {
 
             <div className="pt-5 border-t border-surface-border flex items-center justify-between text-xs text-text-muted font-semibold">
               <span>PILOT ASSESSMENT</span>
-              <span>{new Date(selectedEval.created_at).toLocaleString()}</span>
+              <span>{formatIST(selectedEval.created_at)}</span>
             </div>
           </div>
         )}

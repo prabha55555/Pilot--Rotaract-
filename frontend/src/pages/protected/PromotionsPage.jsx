@@ -13,6 +13,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Toast } from '../../components/ui/Toast'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Button } from '../../components/ui/Button'
+import { formatDateIST } from '../../utils/date'
 
 export default function PromotionsPage() {
   const { user: currentUser } = useAuth()
@@ -135,6 +136,18 @@ export default function PromotionsPage() {
       )
     },
     {
+      header: 'Action Type',
+      accessor: 'action_type',
+      render: (row) => {
+        const isReversion = row.action_type === 'Reversion'
+        return (
+          <Badge variant={isReversion ? 'danger' : 'success'}>
+            {row.action_type || 'Promotion'}
+          </Badge>
+        )
+      }
+    },
+    {
       header: 'Old Role',
       accessor: 'old_role',
       render: (row) => <Badge variant={row.old_role}>{row.old_role}</Badge>
@@ -142,12 +155,15 @@ export default function PromotionsPage() {
     {
       header: 'New Role',
       accessor: 'new_role',
-      render: (row) => (
-        <div className="flex items-center gap-1.5 text-semantic-success">
-          <ArrowUpRight size={14} className="stroke-[2.5]" />
-          <Badge variant={row.new_role}>{row.new_role}</Badge>
-        </div>
-      )
+      render: (row) => {
+        const isReversion = row.action_type === 'Reversion'
+        return (
+          <div className={`flex items-center gap-1.5 ${isReversion ? 'text-semantic-error' : 'text-semantic-success'}`}>
+            <ArrowUpRight size={14} className={`stroke-[2.5] ${isReversion ? 'rotate-90' : ''}`} />
+            <Badge variant={row.new_role}>{row.new_role}</Badge>
+          </div>
+        )
+      }
     },
     {
       header: 'Authorized By',
@@ -155,10 +171,10 @@ export default function PromotionsPage() {
       render: (row) => <span className="text-xs font-semibold text-text-muted">{row.promoter?.name}</span>
     },
     {
-      header: 'Date Promoted',
+      header: 'Date Performed',
       accessor: 'promoted_at',
       sortable: true,
-      render: (row) => <span className="text-xs text-text-light font-medium">{new Date(row.promoted_at).toLocaleDateString()}</span>
+      render: (row) => <span className="text-xs text-text-light font-medium">{formatDateIST(row.promoted_at)}</span>
     }
   ]
 

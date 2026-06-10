@@ -4,6 +4,7 @@ import { api } from '../../services/api'
 import { Modal } from './Modal'
 import { Badge } from './Badge'
 import { Button } from './Button'
+import { formatIST, formatDateIST } from '../../utils/date'
 import { 
   Calendar, MapPin, ClipboardList, User, Phone, 
   FileText, ExternalLink, Download, Clock, MessageSquare,
@@ -71,8 +72,7 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
 
   // Date formatting helpers
   const formatDate = (dateStr) => {
-    if (!dateStr) return '-'
-    return new Date(dateStr).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+    return formatIST(dateStr)
   }
 
   // Image error fallback handler
@@ -327,7 +327,7 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
                           "{ev.remarks}"
                         </p>
                         <span className="text-[9px] text-text-light font-semibold block pt-1">
-                          {new Date(ev.created_at).toLocaleDateString()}
+                          {formatDateIST(ev.created_at)}
                         </span>
                       </div>
                     ))}

@@ -1,9 +1,20 @@
+import { supabase } from './supabase'
+
 const API_BASE_URL = '/api'
 
 const apiCall = async (endpoint, options = {}) => {
   const headers = {}
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`
+    }
+  } catch (err) {
+    console.error('Error attaching auth header:', err)
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -82,6 +93,10 @@ export const api = {
       body: JSON.stringify({ newRole }),
     }),
 
+  revertUser: (userId) =>
+    apiCall(`/users/${userId}/revert`, {
+      method: 'POST',
+    }),
   // Activities
   createActivity: (activityData) =>
     apiCall('/activities', {

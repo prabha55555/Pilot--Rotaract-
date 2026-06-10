@@ -167,6 +167,34 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user])
 
+  useEffect(() => {
+    if (user) {
+      const profileChannel = supabase
+        .channel(`user-profile-${user.id}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${user.id}`
+        }, (payload) => {
+          console.log('🔄 Realtime user profile update received:', payload.new)
+          if (payload.new && payload.new.role && payload.new.role !== userRole) {
+            console.log(`🔄 Role changed from ${userRole} to ${payload.new.role}. Updating role and redirecting to dashboard.`)
+            setUserRole(payload.new.role)
+            window.location.href = '/dashboard'
+          }
+          if (payload.new && payload.new.name) {
+            setUser(prev => prev ? { ...prev, name: payload.new.name } : null)
+          }
+        })
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(profileChannel)
+      }
+    }
+  }, [user, userRole])
+
   const markAsRead = async (notifId) => {
     try {
       const { error } = await supabase

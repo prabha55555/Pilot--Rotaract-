@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { 
   Plus, Edit2, ShieldAlert, Archive, Trash, Check, UserMinus,
-  Filter, Search, X, ShieldCheck, ArrowUp
+  Filter, Search, X, ShieldCheck, ArrowUp, RotateCcw
 } from 'lucide-react'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DataTable } from '../../components/ui/DataTable'
@@ -136,6 +136,19 @@ export default function UserManagementPage() {
     }
   }
 
+  const handleRevert = async (user) => {
+    if (!window.confirm(`Are you sure you want to revert ${user.name}'s role? This will restore their previous role based on their latest promotion history.`)) return
+    
+    try {
+      await api.revertUser(user.id)
+      showToast(`Successfully reverted ${user.name}'s role!`)
+      fetchUsers()
+    } catch (err) {
+      console.error(err)
+      showToast(err.message || 'Reversion failed', 'error')
+    }
+  }
+
   const handleFormSubmit = async (e) => {
     e.preventDefault()
     if (!email || !name || !role || (!editingUser && !password)) {
@@ -243,6 +256,7 @@ export default function UserManagementPage() {
         // Admins can only modify/deactivate DTD and DT
         const canModify = isSuperAdmin || (isAdmin && (row.role === 'DTD' || row.role === 'DT'))
         const canPromote = (isSuperAdmin && row.role !== 'SuperAdmin') || (isAdmin && row.role === 'DTD')
+        const canRevert = isSuperAdmin && row.role !== 'DTD' && (row.status === 'Promoted' || row.status === 'Active')
 
         return (
           <div className="flex items-center gap-1.5">
@@ -262,6 +276,15 @@ export default function UserManagementPage() {
                 className="p-2 bg-green-50 text-success hover:bg-success hover:text-white rounded-lg transition-all"
               >
                 <ArrowUp size={13} className="stroke-[2.5]" />
+              </button>
+            )}
+            {canRevert && (
+              <button
+                onClick={() => handleRevert(row)}
+                title="Revert Role / Rollback"
+                className="p-2 bg-rose-50 text-semantic-error hover:bg-semantic-error hover:text-white rounded-lg transition-all"
+              >
+                <RotateCcw size={13} className="stroke-[2.5]" />
               </button>
             )}
             {canModify && row.status === 'Active' && (

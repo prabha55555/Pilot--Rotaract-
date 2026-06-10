@@ -13,6 +13,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Toast } from '../../components/ui/Toast'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Card } from '../../components/ui/Card'
+import { formatDateIST } from '../../utils/date'
 import { Button } from '../../components/ui/Button'
 import { ActivityDetailsModal } from '../../components/ui/ActivityDetailsModal'
 
@@ -363,7 +364,7 @@ export default function ActivitiesPage() {
       header: 'Date Created', 
       accessor: 'created_at', 
       sortable: true,
-      render: (row) => <span className="text-xs text-text-muted font-medium">{new Date(row.created_at).toLocaleDateString()}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
     },
     { 
       header: 'Status', 

@@ -13,6 +13,7 @@ import { Badge } from '../../components/ui/Badge'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { formatDateIST } from '../../utils/date'
 
 export default function DashboardPage() {
   const { user, userRole } = useAuth()
@@ -301,7 +302,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="pt-2 text-xs text-text-muted font-medium">
-                Evaluator: <span className="font-semibold text-text-main">{extraData.latestEvaluation.evaluator?.name}</span> • {new Date(extraData.latestEvaluation.created_at).toLocaleDateString()}
+                Evaluator: <span className="font-semibold text-text-main">{extraData.latestEvaluation.evaluator?.name}</span> • {formatDateIST(extraData.latestEvaluation.created_at)}
               </div>
             </div>
           ) : (

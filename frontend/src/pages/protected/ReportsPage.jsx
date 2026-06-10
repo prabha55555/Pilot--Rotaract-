@@ -13,6 +13,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { DataTable } from '../../components/ui/DataTable'
 import { Badge } from '../../components/ui/Badge'
 import { StatCard } from '../../components/ui/StatCard'
+import { formatDateIST } from '../../utils/date'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Toast } from '../../components/ui/Toast'
 import { Card } from '../../components/ui/Card'
@@ -108,9 +109,9 @@ export default function ReportsPage() {
       }, {}) || {}
       setRoleDistribution(Object.entries(roleCounts).map(([name, value]) => ({ name, value })))
 
-      const { data: actsData } = await supabase.from('activities').select('category')
+      const { data: actsData } = await supabase.from('activities').select('avenue, category')
       const catCounts = actsData?.reduce((acc, act) => {
-        const cat = act.category || 'Other'
+        const cat = act.avenue || act.category || 'Other'
         acc[cat] = (acc[cat] || 0) + 1
         return acc
       }, {}) || {}
@@ -193,7 +194,7 @@ export default function ReportsPage() {
     {
       header: 'Approval Date',
       accessor: 'promoted_at',
-      render: (row) => <span className="text-xs text-text-muted font-medium">{new Date(row.promoted_at).toLocaleDateString()}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.promoted_at)}</span>
     }
   ]
 

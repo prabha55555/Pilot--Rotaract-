@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { LogOut, ChevronDown, Bell, User, Settings } from 'lucide-react'
 import logo from '../../utils/logo.png'
+import { formatTimeIST } from '../../utils/date'
 
 export const Navbar = () => {
   const { 
@@ -99,7 +100,7 @@ export const Navbar = () => {
                               <p className={`text-sm font-medium ${!notif.is_read ? 'text-text-main font-semibold' : 'text-text-muted'}`}>{notif.title}</p>
                               <p className="text-xs text-text-muted mt-0.5 break-words">{notif.message}</p>
                               <span className="text-[10px] text-text-light font-medium block mt-1">
-                                {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {formatTimeIST(notif.created_at)}
                               </span>
                             </div>
                           </div>
