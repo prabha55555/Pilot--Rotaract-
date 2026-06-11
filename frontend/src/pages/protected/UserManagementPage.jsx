@@ -32,6 +32,7 @@ export default function UserManagementPage() {
   const [role, setRole] = useState('')
   const [batch, setBatch] = useState('')
   const [phone, setPhone] = useState('')
+  const [pilotId, setPilotId] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   // Filters State
@@ -68,6 +69,7 @@ export default function UserManagementPage() {
     setRole('DTD')
     setBatch(new Date().getFullYear().toString())
     setPhone('')
+    setPilotId('')
     setIsModalOpen(true)
   }
 
@@ -79,6 +81,7 @@ export default function UserManagementPage() {
     setRole(user.role)
     setBatch(user.batch || '')
     setPhone(user.phone || '')
+    setPilotId(user.pilot_id || '')
     setIsModalOpen(true)
   }
 
@@ -156,6 +159,22 @@ export default function UserManagementPage() {
       return
     }
 
+    const normalizedPilotId = pilotId.trim().toUpperCase()
+    if (!normalizedPilotId) {
+      showToast('Pilot ID is required', 'error')
+      return
+    }
+
+    // Uniqueness validation client-side
+    const isDuplicate = users.some(u => 
+      u.pilot_id?.trim().toUpperCase() === normalizedPilotId && 
+      (!editingUser || u.id !== editingUser.id)
+    )
+    if (isDuplicate) {
+      showToast('Pilot ID must be unique across the system', 'error')
+      return
+    }
+
     setSubmitting(true)
     try {
       const userData = { 
@@ -165,6 +184,7 @@ export default function UserManagementPage() {
         role, 
         batch, 
         phone,
+        pilot_id: normalizedPilotId,
         ...(editingUser ? {} : { password })
       }
       
@@ -412,6 +432,20 @@ export default function UserManagementPage() {
               disabled={!!editingUser}
               className="w-full px-4 py-2.5 bg-surface-muted border border-surface-border rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-brand/30 focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-text-light disabled:opacity-60 disabled:cursor-not-allowed"
               placeholder="e.g. john@example.com"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-text-muted tracking-wide mb-1.5">
+              Pilot ID <span className="text-semantic-error">*</span>
+            </label>
+            <input
+              type="text"
+              value={pilotId}
+              onChange={(e) => setPilotId(e.target.value)}
+              className="w-full px-4 py-2.5 bg-surface-muted border border-surface-border rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-brand/30 focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-text-light"
+              placeholder="e.g. PILOT001"
               required
             />
           </div>

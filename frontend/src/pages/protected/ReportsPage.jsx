@@ -62,8 +62,8 @@ export default function ReportsPage() {
         }
         
         // Dynamic fallback
-        const { data: users } = await supabase.from('users').select('id, name, club, pilot_id').eq('role', role).eq('status', 'Active')
-        const { data: acts } = await supabase.from('activities').select('user_id').eq('status', 'Reviewed')
+        const { data: users } = await supabase.from('users').select('id, name, club, pilot_id').eq('role', role).in('status', ['Active', 'Promoted'])
+        const { data: acts } = await supabase.from('activities').select('user_id').eq('status', 'Approved')
         
         const counts = {}
         acts?.forEach(a => { counts[a.user_id] = (counts[a.user_id] || 0) + 1 })
@@ -102,11 +102,27 @@ export default function ReportsPage() {
       setPromotions(mappedPromos)
 
       // 4. Load Role and Category Distributions
-      const { data: usersData } = await supabase.from('users').select('role').eq('status', 'Active')
-      const roleCounts = usersData?.reduce((acc, user) => {
-        acc[user.role] = (acc[user.role] || 0) + 1
-        return acc
-      }, {}) || {}
+      const { data: usersData } = await supabase.from('users').select('role')
+      const roleCounts = {
+        'Super Admin': 0,
+        'Admin': 0,
+        'DT': 0,
+        'DTD': 0
+      }
+      const roleMap = {
+        'SuperAdmin': 'Super Admin',
+        'Admin': 'Admin',
+        'DT': 'DT',
+        'DTD': 'DTD'
+      }
+      usersData?.forEach(user => {
+        const displayName = roleMap[user.role] || user.role
+        if (displayName in roleCounts) {
+          roleCounts[displayName] += 1
+        } else {
+          roleCounts[displayName] = 1
+        }
+      })
       setRoleDistribution(Object.entries(roleCounts).map(([name, value]) => ({ name, value })))
 
       const { data: actsData } = await supabase.from('activities').select('avenue, category')
@@ -127,6 +143,46 @@ export default function ReportsPage() {
 
   useEffect(() => {
     loadReportData()
+
+    // Subscribe to realtime database changes for synchronization
+    const usersChannel = supabase
+      .channel('reports-users')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users' },
+        () => {
+          loadReportData()
+        }
+      )
+      .subscribe()
+
+    const activitiesChannel = supabase
+      .channel('reports-activities')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'activities' },
+        () => {
+          loadReportData()
+        }
+      )
+      .subscribe()
+
+    const promotionsChannel = supabase
+      .channel('reports-promotions')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'promotions' },
+        () => {
+          loadReportData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(usersChannel)
+      supabase.removeChannel(activitiesChannel)
+      supabase.removeChannel(promotionsChannel)
+    }
   }, [])
 
   // Find maximum activity count for monthly chart normalization

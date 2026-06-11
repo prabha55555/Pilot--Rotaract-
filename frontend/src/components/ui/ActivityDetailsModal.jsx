@@ -105,6 +105,12 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
                 <span>{activity.category}</span>
                 <span>•</span>
                 <span>Avenue: <span className="text-brand">{activity.avenue || '-'}</span></span>
+                {activity.user && (
+                  <>
+                    <span>•</span>
+                    <span>Submitted By: <span className="text-text-main">{activity.user.name}</span> <span className="font-bold uppercase">({activity.user.pilot_id || 'N/A'})</span></span>
+                  </>
+                )}
               </div>
             </div>
             <Badge variant={

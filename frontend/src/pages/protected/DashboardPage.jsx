@@ -14,6 +14,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { formatDateIST } from '../../utils/date'
+import { DataTable } from '../../components/ui/DataTable'
 
 export default function DashboardPage() {
   const { user, userRole } = useAuth()
@@ -24,9 +25,7 @@ export default function DashboardPage() {
   const [selectedActivity, setSelectedActivity] = useState(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
-  // SuperAdmin activity pagination & promotions pipeline limit
-  const [activitiesPage, setActivitiesPage] = useState(1)
-  const [activitiesPageSize, setActivitiesPageSize] = useState(4)
+  // SuperAdmin promotions pipeline limit
   const [promotionsLimit, setPromotionsLimit] = useState(4)
 
   useEffect(() => {
@@ -36,28 +35,62 @@ export default function DashboardPage() {
       setLoading(true)
       try {
         if (userRole === 'DTD') {
-          // 1. Total activities submitted
+          // 1. Activities submitted (exclude Drafts)
           const { count: activitiesCount } = await supabase
             .from('activities')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
+            .neq('status', 'Draft')
 
-          // 2. Leaderboard Rank
-          const { data: rankData } = await supabase
-            .from('leaderboards')
-            .select('rank, activity_count')
-            .eq('user_id', user.id)
-            .eq('role', 'DTD')
-            .maybeSingle()
-
-          // 3. Events Conducted count
-          const { count: eventsCount } = await supabase
+          // 2. Evaluation pending (Submitted / Pending Review / Resubmitted)
+          const { count: pendingCount } = await supabase
             .from('activities')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .eq('category', 'Event Conducted')
+            .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
 
-          // 4. Latest Evaluation received
+          // 3. Approved count
+          const { count: approvedCount } = await supabase
+            .from('activities')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('status', 'Approved')
+
+          // 4. Rejected count
+          const { count: rejectedCount } = await supabase
+            .from('activities')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('status', 'Rejected')
+
+          // 5. Calculate Leaderboard Rank dynamically in real-time
+          const { data: dtdUsers } = await supabase
+            .from('users')
+            .select('id')
+            .eq('role', 'DTD')
+            .in('status', ['Active', 'Promoted'])
+
+          const { data: dtdApprovedActivities } = await supabase
+            .from('activities')
+            .select('user_id')
+            .eq('status', 'Approved')
+
+          const counts = {}
+          dtdApprovedActivities?.forEach(act => {
+            counts[act.user_id] = (counts[act.user_id] || 0) + 1
+          })
+
+          const dtdList = dtdUsers?.map(u => ({
+            id: u.id,
+            count: counts[u.id] || 0
+          })) || []
+          dtdList.sort((a, b) => b.count - a.count)
+
+          const userIndex = dtdList.findIndex(item => item.id === user.id)
+          const userRank = userIndex !== -1 ? userIndex + 1 : 'Unranked'
+          const userPoints = userIndex !== -1 ? dtdList[userIndex].count : 0
+
+          // 6. Latest Evaluation received
           const { data: latestEval } = await supabase
             .from('evaluations')
             .select('*, evaluator:users!evaluator_id(name)')
@@ -65,14 +98,25 @@ export default function DashboardPage() {
             .order('created_at', { ascending: false })
             .limit(1)
 
+          // Fetch recent activities for candidate dashboard
+          const { data: recentSubmissions } = await supabase
+            .from('activities')
+            .select('*, user:users(name, role, club, pilot_id)')
+            .eq('user_id', user.id)
+            .neq('status', 'Draft')
+            .order('created_at', { ascending: false })
+
           setStats({
             activitiesCount: activitiesCount || 0,
-            rank: rankData?.rank || 'Unranked',
-            eventsCount: eventsCount || 0,
-            leaderboardPoints: rankData?.activity_count || 0
+            pendingCount: pendingCount || 0,
+            approvedCount: approvedCount || 0,
+            rejectedCount: rejectedCount || 0,
+            rank: userRank,
+            leaderboardPoints: userPoints
           })
           setExtraData({
-            latestEvaluation: latestEval?.[0] || null
+            latestEvaluation: latestEval?.[0] || null,
+            recentSubmissions: recentSubmissions || []
           })
 
         } else if (userRole === 'DT') {
@@ -82,30 +126,52 @@ export default function DashboardPage() {
             .select('*', { count: 'exact', head: true })
             .eq('evaluator_id', user.id)
 
-          // 2. Own leaderboard rank
-          const { data: rankData } = await supabase
-            .from('leaderboards')
-            .select('rank, activity_count')
-            .eq('user_id', user.id)
-            .eq('role', 'DT')
-            .maybeSingle()
-
-          // 3. Own activities submitted
+          // 2. Own activities submitted (exclude Drafts)
           const { count: activitiesCount } = await supabase
             .from('activities')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
+            .neq('status', 'Draft')
 
-          // 4. Pending reviews (All activities submitted by DTDs)
+          // 3. Pending reviews (All activities submitted strictly by DTDs, LIFO order)
           const { data: pendingActivities } = await supabase
             .from('activities')
-            .select('*, user:users(name, club)')
+            .select('*, user:users!inner(name, club, role, pilot_id)')
+            .eq('user.role', 'DTD')
             .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
-            .order('created_at', { ascending: true })
+            .order('created_at', { ascending: false })
+
+          // 4. Calculate DT leaderboard rank dynamically
+          const { data: dtUsers } = await supabase
+            .from('users')
+            .select('id')
+            .eq('role', 'DT')
+            .in('status', ['Active', 'Promoted'])
+
+          const { data: dtApprovedActivities } = await supabase
+            .from('activities')
+            .select('user_id')
+            .eq('status', 'Approved')
+
+          const counts = {}
+          dtApprovedActivities?.forEach(act => {
+            counts[act.user_id] = (counts[act.user_id] || 0) + 1
+          })
+
+          const dtList = dtUsers?.map(u => ({
+            id: u.id,
+            count: counts[u.id] || 0
+          })) || []
+          dtList.sort((a, b) => b.count - a.count)
+
+          const userIndex = dtList.findIndex(item => item.id === user.id)
+          const userRank = userIndex !== -1 ? userIndex + 1 : 'Unranked'
+          const userPoints = userIndex !== -1 ? dtList[userIndex].count : 0
 
           setStats({
             evaluatedCount: evaluatedCount || 0,
-            rank: rankData?.rank || 'Unranked',
+            rank: userRank,
+            leaderboardPoints: userPoints,
             activitiesCount: activitiesCount || 0,
             pendingCount: pendingActivities?.length || 0
           })
@@ -114,27 +180,28 @@ export default function DashboardPage() {
           })
 
         } else if (userRole === 'Admin') {
-          // 1. DTD and DT counts
+          // 1. DTD and DT counts (from all users to match User Management)
           const { data: usersData } = await supabase
             .from('users')
             .select('role')
-            .eq('status', 'Active')
 
           const dtdCount = usersData?.filter(u => u.role === 'DTD').length || 0
           const dtCount = usersData?.filter(u => u.role === 'DT').length || 0
 
-          // 2. Pending evaluations (submitted activities count)
+          // 2. Pending evaluations (submitted DT activities count)
           const { count: pendingCount } = await supabase
             .from('activities')
-            .select('*', { count: 'exact', head: true })
+            .select('*, user:users!inner(role)', { count: 'exact', head: true })
+            .eq('user.role', 'DT')
             .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
 
-          // 3. Recent activity submissions
+          // 3. Recent activity submissions (DT submissions only, LIFO order)
           const { data: recentSubmissions } = await supabase
             .from('activities')
-            .select('*, user:users(name, role, club)')
+            .select('*, user:users!inner(name, role, club, pilot_id)')
+            .eq('user.role', 'DT')
+            .neq('status', 'Draft')
             .order('created_at', { ascending: false })
-            .limit(5)
 
           setStats({
             dtdCount,
@@ -146,7 +213,7 @@ export default function DashboardPage() {
           })
 
         } else if (userRole === 'SuperAdmin') {
-          // 1. Total users count
+          // 1. Total users count (from all users to match User Management)
           const { data: allUsers } = await supabase
             .from('users')
             .select('role, status')
@@ -156,19 +223,19 @@ export default function DashboardPage() {
           const dtCount = allUsers?.filter(u => u.role === 'DT').length || 0
           const dtdCount = allUsers?.filter(u => u.role === 'DTD').length || 0
 
-          // 2. System activity feed (latest submissions)
+          // 2. System activity feed (latest submissions, exclude Drafts)
           const { data: recentSubmissions } = await supabase
             .from('activities')
-            .select('*, user:users(name, role, club)')
+            .select('*, user:users(name, role, club, pilot_id)')
+            .neq('status', 'Draft')
             .order('created_at', { ascending: false })
-            .limit(100)
 
           // 3. Fetch candidates (DTD and DT) for Promotion Pipeline
           const { data: pipelineUsers } = await supabase
             .from('users')
             .select('id, name, role, club')
             .in('role', ['DTD', 'DT'])
-            .eq('status', 'Active')
+            .in('status', ['Active', 'Promoted'])
 
           const pending = pipelineUsers?.map(u => ({
             id: u.id,
@@ -219,9 +286,21 @@ export default function DashboardPage() {
       )
       .subscribe()
 
+    const usersChannel = supabase
+      .channel('dashboard-users')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users' },
+        () => {
+          fetchDashboardData()
+        }
+      )
+      .subscribe()
+
     return () => {
       supabase.removeChannel(activitiesChannel)
       supabase.removeChannel(evaluationsChannel)
+      supabase.removeChannel(usersChannel)
     }
   }, [user, userRole])
 
@@ -233,45 +312,247 @@ export default function DashboardPage() {
     )
   }
 
-  const recentActivities = extraData.recentSubmissions || []
-  const totalActivitiesPages = Math.ceil(recentActivities.length / activitiesPageSize)
-  
-  const paginatedActivities = recentActivities.slice(
-    (activitiesPage - 1) * activitiesPageSize,
-    (activitiesPage - 1) * activitiesPageSize + activitiesPageSize
-  )
+  // DataTable Columns definitions
+  const dtdDashboardColumns = [
+    {
+      header: 'Activity Title',
+      accessor: 'title',
+      sortable: true,
+      render: (row) => <span className="font-semibold text-text-main text-sm block">{row.title}</span>
+    },
+    {
+      header: 'Category / Avenue',
+      accessor: 'category',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-light font-medium">{row.avenue || row.category || '-'}</span>
+    },
+    {
+      header: 'Status',
+      accessor: 'status',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={
+          row.status === 'Approved' ? 'success' : 
+          row.status === 'Rejected' ? 'error' : 
+          row.status === 'Submitted' ? 'warning' : 'default'
+        }>
+          {row.status}
+        </Badge>
+      )
+    },
+    {
+      header: 'Date Submitted',
+      accessor: 'created_at',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
+    },
+    {
+      header: 'Actions',
+      accessor: 'actions',
+      render: (row) => (
+        <button
+          onClick={() => { setSelectedActivity(row); setIsDetailsOpen(true); }}
+          className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
+          title="View Details"
+        >
+          <Eye size={14} />
+        </button>
+      )
+    }
+  ]
 
-  const handleActivitiesPageSizeChange = (e) => {
-    setActivitiesPageSize(parseInt(e.target.value, 10))
-    setActivitiesPage(1)
-  }
+  const dtDashboardColumns = [
+    {
+      header: 'Candidate Name',
+      accessor: 'user.name',
+      sortable: true,
+      render: (row) => (
+        <div>
+          <span className="font-semibold text-text-main text-sm block">{row.user?.name}</span>
+          <span className="text-[10px] text-text-muted font-bold uppercase block">{row.user?.pilot_id || 'N/A'}</span>
+        </div>
+      )
+    },
+    {
+      header: 'Activity Title',
+      accessor: 'title',
+      sortable: true,
+      render: (row) => <span className="font-semibold text-text-main text-sm block">{row.title}</span>
+    },
+    {
+      header: 'Category / Avenue',
+      accessor: 'category',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-light font-medium">{row.avenue || row.category || '-'}</span>
+    },
+    {
+      header: 'Date Submitted',
+      accessor: 'created_at',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
+    },
+    {
+      header: 'Actions',
+      accessor: 'actions',
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            icon={<Eye size={14} />}
+            onClick={() => { setSelectedActivity(row); setIsDetailsOpen(true); }}
+          >
+            Details
+          </Button>
+          <Button 
+            size="sm"
+            onClick={() => navigate('/evaluate', { state: { candidateId: row.user_id } })}
+          >
+            Review Candidate
+          </Button>
+        </div>
+      )
+    }
+  ]
+
+  const adminDashboardColumns = [
+    {
+      header: 'Trainer Name',
+      accessor: 'user.name',
+      sortable: true,
+      render: (row) => (
+        <div>
+          <span className="font-semibold text-text-main text-sm block">{row.user?.name}</span>
+          <span className="text-[10px] text-text-muted font-bold uppercase block">{row.user?.pilot_id || 'N/A'}</span>
+        </div>
+      )
+    },
+    {
+      header: 'Activity Title',
+      accessor: 'title',
+      sortable: true,
+      render: (row) => <span className="font-semibold text-text-main text-sm block">{row.title}</span>
+    },
+    {
+      header: 'Category / Avenue',
+      accessor: 'category',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-light font-medium">{row.avenue || row.category || '-'}</span>
+    },
+    {
+      header: 'Status',
+      accessor: 'status',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={
+          row.status === 'Approved' ? 'success' : 
+          row.status === 'Rejected' ? 'error' : 
+          row.status === 'Submitted' ? 'warning' : 'default'
+        }>
+          {row.status}
+        </Badge>
+      )
+    },
+    {
+      header: 'Actions',
+      accessor: 'actions',
+      render: (row) => (
+        <button
+          onClick={() => { setSelectedActivity(row); setIsDetailsOpen(true); }}
+          className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
+          title="View Details"
+        >
+          <Eye size={14} />
+        </button>
+      )
+    }
+  ]
+
+  const superAdminDashboardColumns = [
+    {
+      header: 'User Name',
+      accessor: 'user.name',
+      sortable: true,
+      render: (row) => (
+        <div>
+          <span className="font-semibold text-text-main text-sm block">{row.user?.name}</span>
+          <span className="text-[10px] text-text-muted font-bold uppercase block">{row.user?.pilot_id || 'N/A'}</span>
+        </div>
+      )
+    },
+    {
+      header: 'Activity Title',
+      accessor: 'title',
+      sortable: true,
+      render: (row) => <span className="font-semibold text-text-main text-sm block">{row.title}</span>
+    },
+    {
+      header: 'Category / Avenue',
+      accessor: 'category',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-light font-medium">{row.avenue || row.category || '-'}</span>
+    },
+    {
+      header: 'Status',
+      accessor: 'status',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={
+          row.status === 'Approved' ? 'success' : 
+          row.status === 'Rejected' ? 'error' : 
+          row.status === 'Submitted' ? 'warning' : 'default'
+        }>
+          {row.status}
+        </Badge>
+      )
+    },
+    {
+      header: 'Actions',
+      accessor: 'actions',
+      render: (row) => (
+        <button
+          onClick={() => { setSelectedActivity(row); setIsDetailsOpen(true); }}
+          className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
+          title="View Details"
+        >
+          <Eye size={14} />
+        </button>
+      )
+    }
+  ]
 
   const renderDTD = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <StatCard 
           title="Activities Submitted" 
           value={stats.activitiesCount} 
           icon={Activity} 
-          trend={{ value: 'Total logs', isPositive: true }}
+          trend={{ value: 'Total submissions', isPositive: true }}
+        />
+        <StatCard 
+          title="Evaluation Pending" 
+          value={stats.pendingCount} 
+          icon={Clock} 
+          trend={{ value: 'Awaiting review', isPositive: stats.pendingCount === 0 }}
+        />
+        <StatCard 
+          title="Approved Activities" 
+          value={stats.approvedCount} 
+          icon={CheckCircle} 
+          trend={{ value: 'Approved submissions', isPositive: true }}
+        />
+        <StatCard 
+          title="Rejected Activities" 
+          value={stats.rejectedCount} 
+          icon={AlertCircle} 
+          trend={{ value: 'Revisions needed', isPositive: stats.rejectedCount === 0 }}
         />
         <StatCard 
           title="Leaderboard Rank" 
           value={stats.rank !== 'Unranked' ? `#${stats.rank}` : stats.rank} 
           icon={TrendingUp} 
           trend={{ value: `${stats.leaderboardPoints} pts`, isPositive: true }}
-        />
-        <StatCard 
-          title="Events Conducted" 
-          value={stats.eventsCount} 
-          icon={CheckCircle} 
-          trend={{ value: 'Facilitated', isPositive: true }}
-        />
-        <StatCard 
-          title="Pending Evaluations" 
-          value={extraData.latestEvaluation ? 'Evaluated' : 'None yet'} 
-          icon={FileText} 
-          trend={{ value: 'Status', isPositive: !!extraData.latestEvaluation }}
         />
       </div>
 
@@ -377,40 +658,14 @@ export default function DashboardPage() {
           </Button>
         </div>
         
-        {extraData.pendingActivities?.length > 0 ? (
-          <div className="divide-y divide-surface-border">
-            {extraData.pendingActivities.slice(0, 5).map((act) => (
-              <div key={act.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-muted/50 rounded-xl px-2 transition-all">
-                <div className="flex-1 cursor-pointer" onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}>
-                  <h4 className="font-semibold text-sm text-text-main hover:text-brand transition-colors">{act.title}</h4>
-                  <p className="text-xs text-text-muted font-medium mt-1">
-                    Candidate: {act.user?.name} • Category: {act.category}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    icon={<Eye size={14} />}
-                    onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}
-                  >
-                    Details
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={() => navigate('/evaluate', { state: { candidateId: act.user_id } })}
-                  >
-                    Review Candidate
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="py-10 text-center text-text-muted font-medium text-sm">
-            All caught up! No candidate activities are currently pending review.
-          </div>
-        )}
+        <DataTable
+          columns={dtDashboardColumns}
+          data={extraData.pendingActivities || []}
+          searchPlaceholder="Search pending submissions..."
+          searchKey="user.name"
+          emptyTitle="All Caught Up!"
+          emptyDescription="There are no candidate activities currently awaiting review."
+        />
       </Card>
     </div>
   )
@@ -441,41 +696,14 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 p-6">
           <h3 className="text-lg font-semibold text-text-main font-outfit mb-6">Recent Activity Submissions</h3>
-          {extraData.recentSubmissions?.length > 0 ? (
-            <div className="space-y-3">
-              {extraData.recentSubmissions.map((act) => (
-                <div key={act.id} className="p-4 border border-surface-border hover:bg-surface-muted rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
-                  <div className="flex-1 cursor-pointer" onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}>
-                    <h4 className="font-semibold text-sm text-text-main hover:text-brand transition-colors">{act.title}</h4>
-                    <p className="text-xs text-text-muted font-medium mt-1">
-                      By: <span className="text-text-main">{act.user?.name}</span> ({act.user?.role}) • {act.user?.club}
-                    </p>
-                    <p className="text-xs text-text-muted mt-1 font-medium">Category: {act.category}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}
-                      className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
-                      title="View Details"
-                    >
-                      <Eye size={14} />
-                    </button>
-                    <Badge variant={
-                      act.status === 'Approved' ? 'success' : 
-                      act.status === 'Rejected' ? 'error' : 
-                      act.status === 'Submitted' ? 'warning' : 'default'
-                    }>
-                      {act.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-10 text-center text-text-muted font-medium text-sm">
-              No recent submissions found.
-            </div>
-          )}
+          <DataTable
+            columns={adminDashboardColumns}
+            data={extraData.recentSubmissions || []}
+            searchPlaceholder="Search recent submissions..."
+            searchKey="user.name"
+            emptyTitle="No Recent Submissions"
+            emptyDescription="No recent submissions found."
+          />
         </Card>
 
         <Card className="p-6 flex flex-col">
@@ -532,89 +760,16 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 p-6 flex flex-col justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-text-main font-outfit mb-6">Recent System Activities</h3>
-            {paginatedActivities.length > 0 ? (
-              <div className="space-y-3">
-                {paginatedActivities.map((act) => (
-                  <div key={act.id} className="p-4 border border-surface-border hover:bg-surface-muted rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
-                    <div className="flex-1 cursor-pointer" onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}>
-                      <h4 className="font-semibold text-sm text-text-main hover:text-brand transition-colors">{act.title}</h4>
-                      <p className="text-xs text-text-muted font-medium mt-1">
-                        By: <span className="text-text-main">{act.user?.name}</span> ({act.user?.role}) • {act.user?.club}
-                      </p>
-                      <p className="text-xs text-text-muted mt-1 font-medium">Category: {act.category}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => { setSelectedActivity(act); setIsDetailsOpen(true); }}
-                        className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
-                        title="View Details"
-                      >
-                        <Eye size={14} />
-                      </button>
-                      <Badge variant={
-                        act.status === 'Approved' ? 'success' : 
-                        act.status === 'Rejected' ? 'error' : 
-                        act.status === 'Submitted' ? 'warning' : 'default'
-                      }>
-                        {act.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-10 text-center text-text-muted font-medium text-sm">
-                No recent submissions found.
-              </div>
-            )}
-          </div>
-
-          {/* Pagination Controls */}
-          {recentActivities.length > 0 && (
-            <div className="mt-6 pt-4 border-t border-surface-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-2 text-xs text-text-muted font-medium">
-                <span>Show:</span>
-                <select
-                  value={activitiesPageSize}
-                  onChange={handleActivitiesPageSizeChange}
-                  className="bg-surface-muted border border-surface-border rounded-lg px-2 py-1 text-xs text-text-main focus:outline-none focus:border-brand cursor-pointer"
-                >
-                  {[4, 10, 25, 50].map((size) => (
-                    <option key={size} value={size}>
-                      {size} records
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {totalActivitiesPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={activitiesPage === 1}
-                    onClick={() => setActivitiesPage(p => Math.max(1, p - 1))}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-xs text-text-muted font-semibold font-outfit">
-                    Page {activitiesPage} of {totalActivitiesPages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={activitiesPage === totalActivitiesPages}
-                    onClick={() => setActivitiesPage(p => Math.min(totalActivitiesPages, p + 1))}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+        <Card className="lg:col-span-2 p-6">
+          <h3 className="text-lg font-semibold text-text-main font-outfit mb-6">Recent System Activities</h3>
+          <DataTable
+            columns={superAdminDashboardColumns}
+            data={extraData.recentSubmissions || []}
+            searchPlaceholder="Search system activities..."
+            searchKey="user.name"
+            emptyTitle="No Recent Submissions"
+            emptyDescription="No recent submissions found."
+          />
         </Card>
 
         <Card className="p-6 flex flex-col justify-between">

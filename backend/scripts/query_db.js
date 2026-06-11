@@ -37,8 +37,18 @@ async function main() {
     return
   }
 
-  console.log('--- ACTIVITIES ---')
-  console.log(activities)
+  console.log('Querying leaderboards...')
+  const { data: leaderboards, error: leadErr } = await supabase
+    .from('leaderboards')
+    .select('*')
+
+  if (leadErr) {
+    console.error('Leaderboards fetch error:', leadErr)
+    return
+  }
+
+  console.log('--- LEADERBOARDS ---')
+  console.log(leaderboards)
 }
 
 main().catch(console.error)

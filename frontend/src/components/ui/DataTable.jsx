@@ -2,6 +2,14 @@ import React, { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Search, ArrowUpDown } from 'lucide-react'
 import { EmptyState } from './EmptyState'
 
+const getNestedValue = (obj, path) => {
+  if (!path) return undefined
+  if (typeof path !== 'string') return undefined
+  return path.split('.').reduce((acc, part) => {
+    return acc && acc[part] !== undefined ? acc[part] : undefined
+  }, obj)
+}
+
 export const DataTable = ({
   columns = [],
   data = [],
@@ -36,7 +44,7 @@ export const DataTable = ({
     // Search filter
     if (searchTerm && searchKey) {
       result = result.filter(item => {
-        const val = item[searchKey]
+        const val = getNestedValue(item, searchKey)
         return val ? String(val).toLowerCase().includes(searchTerm.toLowerCase()) : false
       })
     } else if (searchTerm) {
@@ -51,8 +59,11 @@ export const DataTable = ({
     // Sorting
     if (sortConfig.key) {
       result.sort((a, b) => {
-        let aValue = a[sortConfig.key]
-        let bValue = b[sortConfig.key]
+        let aValue = getNestedValue(a, sortConfig.key)
+        let bValue = getNestedValue(b, sortConfig.key)
+
+        if (aValue === undefined || aValue === null) aValue = ''
+        if (bValue === undefined || bValue === null) bValue = ''
 
         // Custom extractors if needed
         if (typeof aValue === 'string') aValue = aValue.toLowerCase()

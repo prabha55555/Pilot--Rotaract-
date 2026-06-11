@@ -5,7 +5,7 @@ import { supabase } from '../../services/supabase'
 import { api } from '../../services/api'
 import { 
   FileText, CheckCircle, Award, AlertCircle, Plus, 
-  MessageSquare, Sparkles, Send, Filter, Check, Eye
+  MessageSquare, Sparkles, Send, Filter, Check, Eye, FileCheck
 } from 'lucide-react'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { DataTable } from '../../components/ui/DataTable'
@@ -27,6 +27,7 @@ export default function EvaluationsPage() {
   const [loading, setLoading] = useState(true)
   const [pendingActivities, setPendingActivities] = useState([])
   const [evaluations, setEvaluations] = useState([])
+  const [evaluatorTab, setEvaluatorTab] = useState('pending') // 'pending' or 'history'
   const [toast, setToast] = useState(null)
   
   // Modal State
@@ -51,7 +52,7 @@ export default function EvaluationsPage() {
     try {
       const { data, error } = await supabase
         .from('activities')
-        .select('*')
+        .select('*, user:users(name, role, club, pilot_id)')
         .eq('id', activityId)
         .single()
       
@@ -75,18 +76,29 @@ export default function EvaluationsPage() {
     setLoading(true)
     try {
       if (isEvaluatorView) {
-        // Find submitted activities based on evaluator role
-        // For simplicity, any Admin/DT can see submitted activities from users they supervise,
-        // or just all submitted activities in the system for this demo.
-        const { data: actsData, error: actsError } = await supabase
+        // Find submitted activities based on evaluator role hierarchy (LIFO order)
+        let query = supabase
           .from('activities')
-          .select('*, user:users(id, name, club, pilot_id, role)')
+          .select('*, user:users!inner(id, name, club, pilot_id, role)')
           .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
-          .order('created_at', { ascending: true })
+
+        if (userRole === 'DT') {
+          query = query.eq('user.role', 'DTD')
+        } else if (userRole === 'Admin' || userRole === 'SuperAdmin') {
+          query = query.eq('user.role', 'DT')
+        }
+
+        const { data: actsData, error: actsError } = await query
+          .order('created_at', { ascending: false })
         
         if (actsError) throw actsError
-        // Filter out SuperAdmins/Admins if we only want to show DT/DTD
-        setPendingActivities(actsData || [])
+        
+        const mappedActs = actsData?.map(act => ({
+          ...act,
+          candidate_name: act.user?.name || 'Unknown',
+          candidate_pilot_id: act.user?.pilot_id || 'N/A'
+        })) || []
+        setPendingActivities(mappedActs)
 
         // Fetch evaluations submitted by this evaluator
         const { data: evalsData, error: evalsError } = await supabase
@@ -96,7 +108,13 @@ export default function EvaluationsPage() {
           .order('created_at', { ascending: false })
         
         if (evalsError) throw evalsError
-        setEvaluations(evalsData || [])
+        
+        const mappedEvals = evalsData?.map(e => ({
+          ...e,
+          candidate_name: e.candidate?.name || 'Unknown',
+          candidate_pilot_id: e.candidate?.pilot_id || 'N/A'
+        })) || []
+        setEvaluations(mappedEvals)
       } else {
         // Candidate view (DTD or DT viewing own evaluations received)
         const { data: evalsData, error: evalsError } = await supabase
@@ -106,7 +124,13 @@ export default function EvaluationsPage() {
           .order('created_at', { ascending: false })
         
         if (evalsError) throw evalsError
-        setEvaluations(evalsData || [])
+        
+        const mappedEvals = evalsData?.map(e => ({
+          ...e,
+          evaluator_name: e.evaluator?.name || 'Unknown',
+          evaluator_role: e.evaluator?.role || 'N/A'
+        })) || []
+        setEvaluations(mappedEvals)
       }
     } catch (err) {
       console.error(err)
@@ -265,6 +289,61 @@ export default function EvaluationsPage() {
     }
   ]
 
+  // Columns for Pending Activities Queue
+  const pendingColumns = [
+    { 
+      header: 'Candidate Name', 
+      accessor: 'user.name', 
+      sortable: true,
+      render: (row) => (
+        <div>
+          <span className="font-semibold text-text-main text-sm block">{row.user?.name}</span>
+          <span className="text-[10px] text-text-muted font-bold uppercase block">{row.user?.pilot_id}</span>
+        </div>
+      )
+    },
+    { 
+      header: 'Activity Title', 
+      accessor: 'title',
+      sortable: true,
+      render: (row) => <span className="font-semibold text-text-main text-sm block">{row.title}</span>
+    },
+    { 
+      header: 'Category / Avenue', 
+      accessor: 'category',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-light font-medium">{row.avenue || row.category || '-'}</span>
+    },
+    { 
+      header: 'Date Submitted', 
+      accessor: 'created_at',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
+    },
+    {
+      header: 'Actions',
+      accessor: 'actions',
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleViewActivityDetails(row.id)}
+            title="View Submission Details & Evidence"
+            className="p-2 bg-gray-50 text-text-muted hover:bg-gray-200 hover:text-text-main rounded-lg transition-all"
+          >
+            <Eye size={14} className="stroke-[2.5]" />
+          </button>
+          <button
+            onClick={() => handleOpenSubmitModal(row)}
+            title="Submit Evaluation & Approve/Reject"
+            className="p-2 bg-brand-light text-brand hover:bg-brand hover:text-white rounded-lg transition-all"
+          >
+            <FileCheck size={14} className="stroke-[2.5]" />
+          </button>
+        </div>
+      )
+    }
+  ]
+
   // Candidate Table Columns (Evaluations Received)
   const candidateColumns = [
     { 
@@ -345,41 +424,59 @@ export default function EvaluationsPage() {
       {isEvaluatorView ? (
         // Evaluator Listing
         <div className="space-y-6">
-          {/* Quick activities bar */}
-          {pendingActivities.length > 0 && (
-            <Card className="p-5">
-              <h4 className="text-sm font-semibold text-text-main font-outfit mb-3">Activities Pending Approval</h4>
-              <div className="flex flex-wrap gap-2">
-                {pendingActivities.map(act => (
-                  <button
-                    key={act.id}
-                    onClick={() => handleOpenSubmitModal(act)}
-                    className="px-3 py-2 bg-surface-muted hover:bg-brand-light hover:border-brand/30 hover:text-brand text-text-main text-xs font-semibold rounded-xl border border-surface-border flex items-center gap-1.5 transition-all"
-                  >
-                    <Plus size={14} />
-                    {act.title}
-                  </button>
-                ))}
-              </div>
-            </Card>
-          )}
+          {/* Sub-tabs for Evaluator */}
+          <div className="flex border-b border-surface-border gap-6">
+            <button
+              onClick={() => setEvaluatorTab('pending')}
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+                evaluatorTab === 'pending'
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-text-muted hover:text-text-main'
+              }`}
+            >
+              <FileText size={18} />
+              Pending Review Queue ({pendingActivities.length})
+            </button>
+            <button
+              onClick={() => setEvaluatorTab('history')}
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+                evaluatorTab === 'history'
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-text-muted hover:text-text-main'
+              }`}
+            >
+              <CheckCircle size={18} />
+              Evaluation History Log ({evaluations.length})
+            </button>
+          </div>
 
-          <DataTable
-            columns={evaluatorColumns}
-            data={evaluations}
-            searchPlaceholder="Search submitted reviews..."
-            searchKey="candidate"
-            emptyTitle="No Evaluations Logged"
-            emptyDescription="You haven't completed any candidate evaluations yet."
-          />
+          {evaluatorTab === 'pending' ? (
+            <DataTable
+              columns={pendingColumns}
+              data={pendingActivities}
+              searchPlaceholder="Search pending submissions by candidate name..."
+              searchKey="candidate_name"
+              emptyTitle="All Caught Up!"
+              emptyDescription="There are no candidate activities currently awaiting review."
+            />
+          ) : (
+            <DataTable
+              columns={evaluatorColumns}
+              data={evaluations}
+              searchPlaceholder="Search completed evaluations by candidate name..."
+              searchKey="candidate_name"
+              emptyTitle="No Evaluations Logged"
+              emptyDescription="You haven't completed any candidate evaluations yet."
+            />
+          )}
         </div>
       ) : (
         // Candidate view
         <DataTable
           columns={candidateColumns}
           data={evaluations}
-          searchPlaceholder="Search reviews received..."
-          searchKey="evaluator"
+          searchPlaceholder="Search reviews received by evaluator name..."
+          searchKey="evaluator_name"
           emptyTitle="No Feedback Received"
           emptyDescription="You haven't received any validation evaluations yet. Your reviews will appear here."
         />

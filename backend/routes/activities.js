@@ -47,15 +47,22 @@ router.post('/', async (req, res) => {
     if (data.status === 'Submitted') {
       const { data: userProfile } = await supabase
         .from('users')
-        .select('name')
+        .select('name, role')
         .eq('id', userId)
         .single()
       
       const candidateName = userProfile?.name || 'A candidate'
+      const candidateRole = userProfile?.role || 'DTD'
       const titleMsg = 'New Activity Submitted'
       const detailMsg = `${candidateName} submitted a new activity: "${title}"`
-      await notifyRole('DT', titleMsg, detailMsg, 'activity_submitted', data.id)
-      await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', data.id)
+      
+      if (candidateRole === 'DTD') {
+        await notifyRole('DT', titleMsg, detailMsg, 'activity_submitted', data.id)
+        await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', data.id)
+      } else if (candidateRole === 'DT') {
+        await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', data.id)
+        await notifyRole('SuperAdmin', titleMsg, detailMsg, 'activity_submitted', data.id)
+      }
     }
 
     res.status(201).json(data)
@@ -69,12 +76,12 @@ router.get('/', async (req, res) => {
   try {
     const { userId, status } = req.query
 
-    let query = supabase.from('activities').select('*')
+    let query = supabase.from('activities').select('*, user:users(name, role, club, pilot_id)')
 
     if (userId) query = query.eq('user_id', userId)
     if (status) query = query.eq('status', status)
 
-    const { data, error } = await query
+    const { data, error } = await query.order('created_at', { ascending: false })
 
     if (error) throw error
     res.json(data)
@@ -88,7 +95,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('activities')
-      .select('*')
+      .select('*, user:users(name, role, club, pilot_id)')
       .eq('id', req.params.id)
       .single()
 
@@ -107,7 +114,7 @@ router.patch('/:id/status', async (req, res) => {
     // Fetch activity to get candidate's profile
     const { data: activity } = await supabase
       .from('activities')
-      .select('*, user:users(name)')
+      .select('*, user:users(name, role)')
       .eq('id', req.params.id)
       .single()
 
@@ -126,12 +133,19 @@ router.patch('/:id/status', async (req, res) => {
 
     const candidateId = activity.user_id
     const candidateName = activity.user?.name || 'A candidate'
+    const candidateRole = activity.user?.role || 'DTD'
 
     if (status === 'Submitted') {
       const titleMsg = 'Activity Submitted'
       const detailMsg = `${candidateName} submitted activity: "${activity.title}"`
-      await notifyRole('DT', titleMsg, detailMsg, 'activity_submitted', data.id)
-      await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', data.id)
+      
+      if (candidateRole === 'DTD') {
+        await notifyRole('DT', titleMsg, detailMsg, 'activity_submitted', data.id)
+        await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', data.id)
+      } else if (candidateRole === 'DT') {
+        await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', data.id)
+        await notifyRole('SuperAdmin', titleMsg, detailMsg, 'activity_submitted', data.id)
+      }
     } else if (status === 'Approved') {
       await createNotification(
         candidateId,
@@ -199,16 +213,23 @@ router.put('/:id', async (req, res) => {
     if (status === 'Submitted') {
       const { data: activity } = await supabase
         .from('activities')
-        .select('*, user:users(name)')
+        .select('*, user:users(name, role)')
         .eq('id', req.params.id)
         .single()
       
       if (activity) {
         const candidateName = activity.user?.name || 'A candidate'
+        const candidateRole = activity.user?.role || 'DTD'
         const titleMsg = 'Activity Resubmitted'
         const detailMsg = `${candidateName} resubmitted activity: "${activity.title}"`
-        await notifyRole('DT', titleMsg, detailMsg, 'activity_submitted', activity.id)
-        await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', activity.id)
+        
+        if (candidateRole === 'DTD') {
+          await notifyRole('DT', titleMsg, detailMsg, 'activity_submitted', activity.id)
+          await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', activity.id)
+        } else if (candidateRole === 'DT') {
+          await notifyRole('Admin', titleMsg, detailMsg, 'activity_submitted', activity.id)
+          await notifyRole('SuperAdmin', titleMsg, detailMsg, 'activity_submitted', activity.id)
+        }
       }
     }
 

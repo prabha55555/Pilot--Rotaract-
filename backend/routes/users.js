@@ -57,10 +57,26 @@ router.get('/:id', async (req, res) => {
 // Create user
 router.post('/', async (req, res) => {
   try {
-    const { email, name, club, role, batch, password } = req.body
+    const { email, name, club, role, batch, password, phone, pilot_id } = req.body
     
     if (!password) {
       return res.status(400).json({ error: 'Password is required to create a new user account' })
+    }
+
+    if (!pilot_id) {
+      return res.status(400).json({ error: 'Pilot ID is required' })
+    }
+
+    // Check Pilot ID uniqueness
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('pilot_id', pilot_id)
+      .maybeSingle()
+
+    if (checkError) throw checkError
+    if (existingUser) {
+      return res.status(400).json({ error: 'Pilot ID must be unique across the system' })
     }
     
     // 1. Create user in Supabase Auth via Admin API
@@ -72,21 +88,19 @@ router.post('/', async (req, res) => {
 
     if (authError) throw authError
 
-    // 2. Generate Pilot ID
-    const pilotId = `PILOT-${role}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`
-
-    // 3. Insert into public users table
+    // 2. Insert into public users table
     const { data, error } = await supabase
       .from('users')
       .insert([
         {
           id: authData.user.id,
-          pilot_id: pilotId,
+          pilot_id,
           email,
           name,
           club,
           role,
           batch,
+          phone,
           status: 'Active',
         },
       ])
@@ -132,6 +146,22 @@ router.post('/', async (req, res) => {
 // Update user
 router.put('/:id', async (req, res) => {
   try {
+    const { pilot_id } = req.body
+    if (pilot_id) {
+      // Check Pilot ID uniqueness (excluding current user)
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('pilot_id', pilot_id)
+        .neq('id', req.params.id)
+        .maybeSingle()
+
+      if (checkError) throw checkError
+      if (existingUser) {
+        return res.status(400).json({ error: 'Pilot ID must be unique across the system' })
+      }
+    }
+
     const { data, error } = await supabase
       .from('users')
       .update(req.body)

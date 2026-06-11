@@ -27,57 +27,44 @@ export default function LeaderboardPage() {
   const loadLeaderboard = async () => {
     setLoading(true)
     try {
-      // Try to load from leaderboards cache table
-      const { data: cacheData, error: cacheError } = await supabase
-        .from('leaderboards')
-        .select('*, user:users(id, name, club, pilot_id)')
+      // Calculate leaderboards dynamically by counting activities
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, name, club, pilot_id')
         .eq('role', roleTab)
-        .order('rank', { ascending: true })
+        .in('status', ['Active', 'Promoted'])
 
-      if (cacheError) throw cacheError
+      if (usersError) throw usersError
 
-      if (cacheData && cacheData.length > 0) {
-        setLeaderboardData(cacheData)
-      } else {
-        // Fallback: Calculate leaderboards dynamically by counting activities
-        const { data: usersData, error: usersError } = await supabase
-          .from('users')
-          .select('id, name, club, pilot_id')
-          .eq('role', roleTab)
-          .eq('status', 'Active')
+      const { data: activitiesData, error: actsError } = await supabase
+        .from('activities')
+        .select('user_id, status')
+        .eq('status', 'Approved') // only count approved activities
 
-        if (usersError) throw usersError
+      if (actsError) throw actsError
 
-        const { data: activitiesData, error: actsError } = await supabase
-          .from('activities')
-          .select('user_id, status')
-          .eq('status', 'Reviewed') // only count reviewed activities
+      // Count activities by user
+      const counts = {}
+      activitiesData?.forEach(act => {
+        counts[act.user_id] = (counts[act.user_id] || 0) + 1
+      })
 
-        if (actsError) throw actsError
+      // Map and sort users
+      const calculated = usersData.map(u => ({
+        user_id: u.id,
+        user: u,
+        activity_count: counts[u.id] || 0
+      }))
+      
+      calculated.sort((a, b) => b.activity_count - a.activity_count)
 
-        // Count activities by user
-        const counts = {}
-        activitiesData?.forEach(act => {
-          counts[act.user_id] = (counts[act.user_id] || 0) + 1
-        })
+      // Assign ranks
+      const ranked = calculated.map((item, index) => ({
+        ...item,
+        rank: index + 1
+      }))
 
-        // Map and sort users
-        const calculated = usersData.map(u => ({
-          user_id: u.id,
-          user: u,
-          activity_count: counts[u.id] || 0
-        }))
-        
-        calculated.sort((a, b) => b.activity_count - a.activity_count)
-
-        // Assign ranks
-        const ranked = calculated.map((item, index) => ({
-          ...item,
-          rank: index + 1
-        }))
-
-        setLeaderboardData(ranked)
-      }
+      setLeaderboardData(ranked)
     } catch (err) {
       console.error(err)
       showToast('Error loading leaderboard data', 'error')
@@ -88,11 +75,38 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     loadLeaderboard()
+
+    // Subscribe to realtime database changes for synchronization
+    const usersChannel = supabase
+      .channel('leaderboard-users')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users' },
+        () => {
+          loadLeaderboard()
+        }
+      )
+      .subscribe()
+
+    const activitiesChannel = supabase
+      .channel('leaderboard-activities')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'activities' },
+        () => {
+          loadLeaderboard()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(usersChannel)
+      supabase.removeChannel(activitiesChannel)
+    }
   }, [roleTab])
 
-  // Extract podium and remaining rows
+  // Extract podium
   const podium = leaderboardData.slice(0, 3)
-  const remaining = leaderboardData.slice(3)
 
   const columns = [
     {
@@ -245,16 +259,16 @@ export default function LeaderboardPage() {
             </div>
           )}
 
-          {/* Ranks 4+ Table */}
+          {/* Complete Ranked Listing */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-text-main font-outfit">Complete Ranked Listing</h3>
             <DataTable
               columns={columns}
-              data={remaining}
+              data={leaderboardData}
               searchPlaceholder="Search rank listings..."
               searchKey="user.name"
-              emptyTitle="No Further Rankings"
-              emptyDescription="There are no other active trainers currently ranked."
+              emptyTitle="No Rankings Found"
+              emptyDescription="There are no active trainers currently ranked."
             />
           </div>
 
