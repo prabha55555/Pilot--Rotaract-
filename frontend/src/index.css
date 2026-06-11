@@ -60,62 +60,95 @@ a, button, input, textarea, select {
 
 /* Custom Redesign Animations */
 @keyframes jet-glide {
-  0%, 100% {
-    transform: translateY(0px) rotate(12deg);
+  0% {
+    transform: translate3d(0, 0, 0) rotate(11deg) scale(0.98);
+  }
+  25% {
+    transform: translate3d(-35px, -20px, 10px) rotate(7deg) scale(1);
   }
   50% {
-    transform: translateY(-15px) rotate(14deg);
+    transform: translate3d(10px, -45px, 20px) rotate(13deg) scale(1.02);
+  }
+  75% {
+    transform: translate3d(45px, -15px, 10px) rotate(16deg) scale(1);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(11deg) scale(0.98);
   }
 }
 
 @keyframes cloud-drift-slow {
   0% {
-    transform: translate3d(100%, 0, 0);
+    transform: translate3d(100vw, 0, 0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.45;
+  }
+  92% {
+    opacity: 0.45;
   }
   100% {
-    transform: translate3d(-150%, 0, 0);
+    transform: translate3d(-120vw, 0, 0);
+    opacity: 0;
   }
 }
 
 @keyframes cloud-drift-med {
   0% {
-    transform: translate3d(100%, 0, 0);
+    transform: translate3d(100vw, 0, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.3;
+  }
+  88% {
+    opacity: 0.3;
   }
   100% {
-    transform: translate3d(-150%, 0, 0);
+    transform: translate3d(-120vw, 0, 0);
+    opacity: 0;
   }
 }
 
 @keyframes cloud-drift-fast {
   0% {
-    transform: translate3d(100%, 0, 0);
+    transform: translate3d(100vw, 0, 0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.2;
+  }
+  85% {
+    opacity: 0.2;
   }
   100% {
-    transform: translate3d(-150%, 0, 0);
+    transform: translate3d(-120vw, 0, 0);
+    opacity: 0;
   }
 }
 
 @keyframes float-slow {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) rotate(0deg);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-12px) rotate(1deg);
   }
 }
 
 @keyframes float-medium {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) rotate(0deg);
   }
   50% {
-    transform: translateY(-18px);
+    transform: translateY(-20px) rotate(-1deg);
   }
 }
 
 @keyframes draw-trail {
   0% {
-    stroke-dashoffset: 1000;
+    stroke-dashoffset: 1200;
   }
   100% {
     stroke-dashoffset: 0;
@@ -124,12 +157,14 @@ a, button, input, textarea, select {
 
 @keyframes pulse-glow {
   0%, 100% {
-    opacity: 0.25;
+    opacity: 0.3;
     transform: scale(1);
+    filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.4));
   }
   50% {
-    opacity: 0.5;
-    transform: scale(1.08);
+    opacity: 0.6;
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.7));
   }
 }
 
@@ -142,11 +177,28 @@ a, button, input, textarea, select {
   }
 }
 
+@keyframes float-particle {
+  0% {
+    transform: translateY(100vh) translateX(0) scale(0.5);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(50px) scale(1.2);
+    opacity: 0;
+  }
+}
+
 /* Scroll reveal utility classes */
 .reveal {
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform, opacity;
 }
 
@@ -157,40 +209,230 @@ a, button, input, textarea, select {
 
 /* Custom classes calling keyframes */
 .animate-jet-glide {
-  animation: jet-glide 6s ease-in-out infinite;
+  animation: jet-glide 8s ease-in-out infinite;
 }
 
 .animate-cloud-slow {
-  animation: cloud-drift-slow 60s linear infinite;
+  animation: cloud-drift-slow 65s linear infinite;
 }
 
 .animate-cloud-med {
-  animation: cloud-drift-med 40s linear infinite;
+  animation: cloud-drift-med 45s linear infinite;
 }
 
 .animate-cloud-fast {
-  animation: cloud-drift-fast 25s linear infinite;
+  animation: cloud-drift-fast 30s linear infinite;
 }
 
 .animate-float-slow {
-  animation: float-slow 5s ease-in-out infinite;
+  animation: float-slow 6s ease-in-out infinite;
 }
 
 .animate-float-medium {
-  animation: float-medium 4s ease-in-out infinite;
+  animation: float-medium 5s ease-in-out infinite;
 }
 
 .animate-pulse-glow {
-  animation: pulse-glow 4s ease-in-out infinite;
+  animation: pulse-glow 3s ease-in-out infinite;
 }
 
 .animate-gradient-shimmer {
   background-size: 200% 200%;
-  animation: gradient-shimmer 15s ease infinite;
+  animation: gradient-shimmer 12s ease infinite;
 }
 
 .animate-trail {
-  stroke-dasharray: 1000;
-  animation: draw-trail 5s cubic-bezier(0.25, 1, 0.5, 1) forwards infinite;
+  stroke-dasharray: 1200;
+  animation: draw-trail 6s linear infinite;
 }
+
+.animate-sky-particle {
+  animation: float-particle 20s linear infinite;
+}
+
+/* Premium UI Utilities */
+.glass-premium {
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.65) !important;
+}
+
+.glass-premium:hover {
+  background: rgba(255, 255, 255, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.glass-premium-dark {
+  background: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.hover-glow {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.hover-glow:hover {
+  transform: translateY(-6px) scale(1.02) !important;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08), 0 0 25px 0 rgba(245, 158, 11, 0.25) !important;
+}
+
+.hover-glow-soft {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.hover-glow-soft:hover {
+  transform: translateY(-4px) scale(1.02) !important;
+  box-shadow: 0 15px 30px -8px rgba(0, 0, 0, 0.05), 0 0 15px 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Cinematic Aviation Animations */
+@keyframes daylight-sunrise {
+  0%, 15%, 90%, 100% { opacity: 1; }
+  25%, 80% { opacity: 0; }
+}
+
+@keyframes daylight-morning {
+  0%, 15%, 50%, 100% { opacity: 0; }
+  25%, 40% { opacity: 1; }
+}
+
+@keyframes daylight-golden {
+  0%, 40%, 75%, 100% { opacity: 0; }
+  50%, 65% { opacity: 1; }
+}
+
+@keyframes daylight-sunset {
+  0%, 65%, 100% { opacity: 0; }
+  75%, 88% { opacity: 1; }
+}
+
+@keyframes radar-sweep {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes radar-ping {
+  0% {
+    transform: scale(0.1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes jet-takeoff {
+  0% {
+    transform: translate3d(-150px, 150px, -50px) rotate(-18deg) scale(0.5);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(350px, -350px, 100px) rotate(-18deg) scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes runway-pulse {
+  0%, 100% {
+    opacity: 0.35;
+    filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.35));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.9));
+  }
+}
+
+@keyframes sweep-spotlight {
+  0%, 100% {
+    transform: rotate(-25deg) scaleX(0.75);
+    opacity: 0.2;
+  }
+  50% {
+    transform: rotate(25deg) scaleX(1.15);
+    opacity: 0.45;
+  }
+}
+
+@keyframes sun-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Animations Classes */
+.animate-daylight-sunrise {
+  animation: daylight-sunrise 48s ease-in-out infinite;
+}
+
+.animate-daylight-morning {
+  animation: daylight-morning 48s ease-in-out infinite;
+}
+
+.animate-daylight-golden {
+  animation: daylight-golden 48s ease-in-out infinite;
+}
+
+.animate-daylight-sunset {
+  animation: daylight-sunset 48s ease-in-out infinite;
+}
+
+.animate-radar-sweep {
+  transform-origin: center center;
+  animation: radar-sweep 6s linear infinite;
+}
+
+.animate-radar-ping {
+  animation: radar-ping 4s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+}
+
+.animate-jet-takeoff {
+  animation: jet-takeoff 8s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+.animate-runway {
+  animation: runway-pulse 2s ease-in-out infinite;
+}
+
+.animate-spotlight {
+  transform-origin: top center;
+  animation: sweep-spotlight 16s ease-in-out infinite;
+}
+
+.animate-sun-rotate {
+  animation: sun-rotate 120s linear infinite;
+}
+
+/* 3D Depth Utilities */
+.perspective-3d {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.parallax-layer {
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: transform;
+}
+
 
