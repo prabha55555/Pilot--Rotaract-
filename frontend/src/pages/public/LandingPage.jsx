@@ -702,16 +702,16 @@ export default function LandingPage() {
 
             {/* Main Premium Typography Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-outfit text-slate-900 leading-[1.15] tracking-tight">
-              Navigate Trainer Development.<br/>
+              Identify Talent Train Excellence<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand via-blue-600 to-[#3B82F6] font-extrabold relative">
-                Elevate Leadership.
+                Elevate Leaders
                 <span className="absolute bottom-1.5 left-0 w-full h-[6px] bg-brand-light/35 -z-10 rounded-full"></span>
               </span>
             </h1>
 
             {/* Copy Subtext */}
             <p className="text-lg md:text-xl text-slate-700 leading-relaxed font-sans max-w-2xl">
-              An enterprise-grade orchestration platform for Rotaract District 3220. Seamlessly evaluate credentials, track training activity hours, and promote talent with a centralized, data-driven framework.
+              A centralized trainer development ecosystem designed for Rotaract districts to evaluate, track, mentor, and promote future district trainers with precision and transparency.
             </p>
 
             {/* Interactive Call To Actions */}
@@ -723,7 +723,7 @@ export default function LandingPage() {
                 </Button>
               </Link>
               
-              <a href="#dashboard-preview" className="inline-flex items-center justify-center font-semibold text-brand hover:text-[#003080] px-6 py-3 rounded-full hover:bg-brand/5 border border-transparent hover:border-brand/10 transition-all duration-300 active:scale-95">
+              <a href="#dashboard-preview" className="inline-flex items-center justify-center font-semibold text-text-main hover:text-brand px-6 py-3 rounded-full hover:bg-white/50 border border-transparent hover:border-surface-border/40 transition-all duration-300 active:scale-95">
                 Explore Dashboard
               </a>
             </div>
