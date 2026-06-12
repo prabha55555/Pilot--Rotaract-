@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
-import { 
+import {
   Plus, Edit2, ShieldAlert, Archive, Trash, Check, UserMinus,
   Filter, Search, X, ShieldCheck, ArrowUp, RotateCcw
 } from 'lucide-react'
@@ -19,11 +19,11 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
-  
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
-  
+
   // Form State
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -128,7 +128,7 @@ export default function UserManagementPage() {
     }
 
     if (!window.confirm(`Are you sure you want to promote ${user.name} from ${user.role} to ${nextRole}?`)) return
-    
+
     try {
       await api.promoteUser(user.id, nextRole)
       showToast(`Successfully promoted ${user.name} to ${nextRole}!`)
@@ -141,7 +141,7 @@ export default function UserManagementPage() {
 
   const handleRevert = async (user) => {
     if (!window.confirm(`Are you sure you want to revert ${user.name}'s role? This will restore their previous role based on their latest promotion history.`)) return
-    
+
     try {
       await api.revertUser(user.id)
       showToast(`Successfully reverted ${user.name}'s role!`)
@@ -165,9 +165,32 @@ export default function UserManagementPage() {
       return
     }
 
+    // Validate Email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email || !emailRegex.test(email)) {
+      showToast('Please enter a valid email address', 'error')
+      return
+    }
+
+    // Validate and sanitize Phone if provided
+    let cleanPhone = phone
+    if (phone) {
+      let digits = phone.replace(/\D/g, '')
+      if (digits.startsWith('91') && digits.length === 12) {
+        digits = digits.substring(2)
+      } else if (digits.startsWith('0') && digits.length === 11) {
+        digits = digits.substring(1)
+      }
+      if (digits.length !== 10) {
+        showToast('Phone number must be exactly 10 digits', 'error')
+        return
+      }
+      cleanPhone = digits
+    }
+
     // Uniqueness validation client-side
-    const isDuplicate = users.some(u => 
-      u.pilot_id?.trim().toUpperCase() === normalizedPilotId && 
+    const isDuplicate = users.some(u =>
+      u.pilot_id?.trim().toUpperCase() === normalizedPilotId &&
       (!editingUser || u.id !== editingUser.id)
     )
     if (isDuplicate) {
@@ -177,17 +200,17 @@ export default function UserManagementPage() {
 
     setSubmitting(true)
     try {
-      const userData = { 
-        email, 
-        name, 
-        club, 
-        role, 
-        batch, 
-        phone,
+      const userData = {
+        email,
+        name,
+        club,
+        role,
+        batch,
+        phone: cleanPhone,
         pilot_id: normalizedPilotId,
         ...(editingUser ? {} : { password })
       }
-      
+
       if (editingUser) {
         await api.updateUser(editingUser.id, userData)
         showToast('User updated successfully')
@@ -195,7 +218,7 @@ export default function UserManagementPage() {
         await api.createUser(userData)
         showToast('User registered successfully')
       }
-      
+
       setIsModalOpen(false)
       fetchUsers()
     } catch (err) {
@@ -215,9 +238,9 @@ export default function UserManagementPage() {
 
   // Columns definition for DataTable
   const columns = [
-    { 
-      header: 'Name / ID', 
-      accessor: 'name', 
+    {
+      header: 'Name / ID',
+      accessor: 'name',
       sortable: true,
       render: (row) => (
         <div>
@@ -226,9 +249,9 @@ export default function UserManagementPage() {
         </div>
       )
     },
-    { 
-      header: 'Email / Phone', 
-      accessor: 'email', 
+    {
+      header: 'Email / Phone',
+      accessor: 'email',
       sortable: true,
       render: (row) => (
         <div>
@@ -237,27 +260,27 @@ export default function UserManagementPage() {
         </div>
       )
     },
-    { 
-      header: 'Club', 
-      accessor: 'club', 
+    {
+      header: 'Club',
+      accessor: 'club',
       sortable: true,
       render: (row) => <span className="text-xs font-medium text-text-main">{row.club || '-'}</span>
     },
-    { 
-      header: 'Batch', 
-      accessor: 'batch', 
+    {
+      header: 'Batch',
+      accessor: 'batch',
       sortable: true,
       render: (row) => <span className="text-xs font-medium text-text-muted">{row.batch || '-'}</span>
     },
-    { 
-      header: 'Role', 
-      accessor: 'role', 
+    {
+      header: 'Role',
+      accessor: 'role',
       sortable: true,
       render: (row) => <Badge variant={row.role}>{row.role}</Badge>
     },
-    { 
-      header: 'Status', 
-      accessor: 'status', 
+    {
+      header: 'Status',
+      accessor: 'status',
       sortable: true,
       render: (row) => <Badge variant={row.status}>{row.status}</Badge>
     },
@@ -269,10 +292,10 @@ export default function UserManagementPage() {
         if (row.email === currentUser?.email) {
           return <span className="text-xs text-text-muted font-medium italic px-2">You (Current)</span>
         }
-        
+
         const isSuperAdmin = userRole === 'SuperAdmin'
         const isAdmin = userRole === 'Admin'
-        
+
         // Admins can only modify/deactivate DTD and DT
         const canModify = isSuperAdmin || (isAdmin && (row.role === 'DTD' || row.role === 'DT'))
         const canPromote = (isSuperAdmin && row.role !== 'SuperAdmin') || (isAdmin && row.role === 'DTD')
@@ -416,7 +439,7 @@ export default function UserManagementPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-2.5 bg-surface-muted border border-surface-border rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-brand/30 focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-text-light"
-              placeholder="e.g. John Doe"
+              placeholder="e.g. Your Name"
               required
             />
           </div>
@@ -431,7 +454,7 @@ export default function UserManagementPage() {
               onChange={(e) => setEmail(e.target.value)}
               disabled={!!editingUser}
               className="w-full px-4 py-2.5 bg-surface-muted border border-surface-border rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-brand/30 focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-text-light disabled:opacity-60 disabled:cursor-not-allowed"
-              placeholder="e.g. john@example.com"
+              placeholder="e.g. Your Email"
               required
             />
           </div>
@@ -475,9 +498,15 @@ export default function UserManagementPage() {
               <input
                 type="text"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '')
+                  if (val.length <= 10) {
+                    setPhone(val)
+                  }
+                }}
+                maxLength={10}
                 className="w-full px-4 py-2.5 bg-surface-muted border border-surface-border rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-brand/30 focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-text-light"
-                placeholder="e.g. +91 9876543210"
+                placeholder="e.g. Enter your Phone Number"
               />
             </div>
             <div>

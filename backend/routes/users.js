@@ -67,6 +67,27 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Pilot ID is required' })
     }
 
+    // Validate Email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' })
+    }
+
+    // Validate and sanitize Phone if provided
+    let cleanPhone = phone
+    if (phone) {
+      let digits = phone.replace(/\D/g, '')
+      if (digits.startsWith('91') && digits.length === 12) {
+        digits = digits.substring(2)
+      } else if (digits.startsWith('0') && digits.length === 11) {
+        digits = digits.substring(1)
+      }
+      if (digits.length !== 10) {
+        return res.status(400).json({ error: 'Phone number must be exactly 10 digits' })
+      }
+      cleanPhone = digits
+    }
+
     // Check Pilot ID uniqueness
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
@@ -100,7 +121,7 @@ router.post('/', async (req, res) => {
           club,
           role,
           batch,
-          phone,
+          phone: cleanPhone,
           status: 'Active',
         },
       ])
@@ -146,7 +167,28 @@ router.post('/', async (req, res) => {
 // Update user
 router.put('/:id', async (req, res) => {
   try {
-    const { pilot_id } = req.body
+    const { pilot_id, phone, email } = req.body
+
+    if (email !== undefined) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!email || !emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Please enter a valid email address' })
+      }
+    }
+
+    if (phone !== undefined && phone !== null && phone !== '') {
+      let digits = phone.replace(/\D/g, '')
+      if (digits.startsWith('91') && digits.length === 12) {
+        digits = digits.substring(2)
+      } else if (digits.startsWith('0') && digits.length === 11) {
+        digits = digits.substring(1)
+      }
+      if (digits.length !== 10) {
+        return res.status(400).json({ error: 'Phone number must be exactly 10 digits' })
+      }
+      req.body.phone = digits
+    }
+
     if (pilot_id) {
       // Check Pilot ID uniqueness (excluding current user)
       const { data: existingUser, error: checkError } = await supabase

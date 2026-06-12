@@ -82,11 +82,27 @@ export default function ProfilePage() {
       return
     }
 
+    // Validate and sanitize Phone if provided
+    let cleanPhone = phone
+    if (phone) {
+      let digits = phone.replace(/\D/g, '')
+      if (digits.startsWith('91') && digits.length === 12) {
+        digits = digits.substring(2)
+      } else if (digits.startsWith('0') && digits.length === 11) {
+        digits = digits.substring(1)
+      }
+      if (digits.length !== 10) {
+        showToast('Phone number must be exactly 10 digits', 'error')
+        return
+      }
+      cleanPhone = digits
+    }
+
     setSubmitting(true)
     try {
       const updated = await api.updateUser(user.id, {
         name,
-        phone,
+        phone: cleanPhone,
         club,
         batch
       })
@@ -211,10 +227,16 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '')
+                      if (val.length <= 10) {
+                        setPhone(val)
+                      }
+                    }}
+                    maxLength={10}
                     disabled={!isEditing}
                     className="w-full pl-10 pr-4 py-2.5 bg-surface-muted border border-surface-border rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-brand/30 focus:ring-4 focus:ring-brand/10 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                    placeholder="+91 98765 43210"
+                    placeholder="e.g. 9876543210"
                   />
                 </div>
               </div>

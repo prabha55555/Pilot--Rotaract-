@@ -275,43 +275,11 @@ documents (uploaded_by references users)
 
 ## Setup Instructions
 
-1. Create Supabase project
-2. Copy the above SQL schema into Supabase SQL editor
-3. Run all queries to create tables and indexes
-4. Enable RLS on all tables
-5. Create RLS policies based on roles (see template below)
-6. Create storage buckets with appropriate permissions
-
-### RLS Policy Template (Example for activities table)
-
-```sql
--- DTD can view/edit own activities
-CREATE POLICY "DTD_activities" ON activities
-  FOR ALL
-  USING (
-    (auth.uid() = user_id AND
-     (SELECT role FROM users WHERE id = auth.uid()) = 'DTD')
-  )
-  WITH CHECK (
-    (auth.uid() = user_id AND
-     (SELECT role FROM users WHERE id = auth.uid()) = 'DTD')
-  );
-
--- DT can view own + DTDs' submitted activities
-CREATE POLICY "DT_activities" ON activities
-  FOR SELECT
-  USING (
-    auth.uid() = user_id OR
-    ((SELECT role FROM users WHERE id = auth.uid()) = 'DT' AND status = 'Submitted')
-  );
-
--- Admin/SuperAdmin can view all
-CREATE POLICY "Admin_activities" ON activities
-  FOR ALL
-  USING (
-    (SELECT role FROM users WHERE id = auth.uid()) IN ('Admin', 'SuperAdmin')
-  );
-```
+1. Create a Supabase project at [Supabase Dashboard](https://supabase.com/dashboard/).
+2. Copy and execute the SQL schema from [docs/schema.sql](file:///d:/PROJECTS/Pilot%20-%20UM/docs/schema.sql) in the Supabase SQL Editor to create all primary tables and indexes.
+3. Verify that the [interviews](file:///d:/PROJECTS/Pilot%20-%20UM/backend/routes/interviews.js) table and database RLS are configured for production by running the full production migration script in [docs/rls_policies.sql](file:///d:/PROJECTS/Pilot%20-%20UM/docs/rls_policies.sql) in the Supabase SQL Editor.
+4. Ensure storage buckets `activities` and `documents` are created under your Supabase storage page.
+5. Once executed, the role-based security policies for all tables and storage layers will be fully active.
 
 ---
 

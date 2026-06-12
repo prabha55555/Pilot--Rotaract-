@@ -79,23 +79,6 @@ CREATE TABLE IF NOT EXISTS evaluations (
 CREATE INDEX IF NOT EXISTS idx_evaluations_candidate_id ON evaluations(candidate_id);
 CREATE INDEX IF NOT EXISTS idx_evaluations_evaluator_id ON evaluations(evaluator_id);
 
--- 5. Interviews
-CREATE TABLE IF NOT EXISTS interviews (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  candidate_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  status VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Scheduled', 'Passed', 'Failed', 'Waitlisted')),
-  interview_date TIMESTAMP,
-  communication_notes TEXT,
-  leadership_notes TEXT,
-  facilitation_notes TEXT,
-  overall_remarks TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_interviews_candidate_id ON interviews(candidate_id);
-CREATE INDEX IF NOT EXISTS idx_interviews_status ON interviews(status);
-
 -- 6. Promotions
 CREATE TABLE IF NOT EXISTS promotions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
