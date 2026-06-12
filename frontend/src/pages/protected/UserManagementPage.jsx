@@ -506,7 +506,7 @@ export default function UserManagementPage() {
                 }}
                 maxLength={10}
                 className="w-full px-4 py-2.5 bg-surface-muted border border-surface-border rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-brand/30 focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-text-light"
-                placeholder="e.g. Enter your Phone Number"
+                placeholder="e.g. Enter your Phn Number"
               />
             </div>
             <div>
@@ -518,7 +518,7 @@ export default function UserManagementPage() {
                 value={club}
                 onChange={(e) => setClub(e.target.value)}
                 className="w-full px-4 py-2.5 bg-surface-muted border border-surface-border rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-brand/30 focus:ring-4 focus:ring-brand/10 transition-all placeholder:text-text-light"
-                placeholder="e.g. Rotaract Club of Chennai"
+                placeholder="e.g. Rotaract Club of Chn"
               />
             </div>
           </div>
