@@ -5,7 +5,7 @@ import authRoutes from './routes/auth.js'
 import userRoutes from './routes/users.js'
 import activityRoutes from './routes/activities.js'
 import evaluationRoutes from './routes/evaluations.js'
-import interviewRoutes from './routes/interviews.js'
+
 import leaderboardRoutes from './routes/leaderboards.js'
 import promotionRoutes from './routes/promotions.js'
 import reportRoutes from './routes/reports.js'
@@ -25,7 +25,7 @@ app.use('/auth', authRoutes)
 app.use('/users', userRoutes)
 app.use('/activities', activityRoutes)
 app.use('/evaluations', evaluationRoutes)
-app.use('/interviews', interviewRoutes)
+
 app.use('/leaderboards', leaderboardRoutes)
 app.use('/promotions', promotionRoutes)
 app.use('/reports', reportRoutes)

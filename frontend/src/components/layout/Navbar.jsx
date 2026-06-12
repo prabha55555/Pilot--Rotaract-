@@ -48,7 +48,7 @@ export const Navbar = () => {
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center h-16">
         {/* Logo Section */}
         <Link to="/" className="flex items-center gap-3 hover:opacity-80 active:scale-95 transition">
-          <img src={logo} alt="PILOT Logo" className="h-8 w-auto" />
+          <img src={logo} alt="PILOT Logo" className="h-12 w-auto" />
         </Link>
 
         {isAuthenticated && (

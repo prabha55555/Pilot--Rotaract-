@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { 
-  ArrowRight, Users, TrendingUp, Award, BookOpen, 
-  Zap, Target, CheckCircle, Shield, Compass, Calendar, 
+import {
+  ArrowRight, Users, TrendingUp, Award, BookOpen,
+  Zap, Target, CheckCircle, Shield, Compass, Calendar,
   MapPin, ChevronRight, Activity, BarChart2, Star,
   Plane, Cloud, ShieldAlert, Sparkles, PlusCircle, ArrowUpRight
 } from 'lucide-react'
@@ -149,7 +149,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#fafafc] text-text-main font-sans selection:bg-brand-light selection:text-brand overflow-x-hidden relative">
-      
+
       {/* Decorative Vertical Connecting Flight Path */}
       <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-10" viewBox="0 0 1440 4500" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
         <defs>
@@ -210,13 +210,13 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero / Sky Arena Section (Midnight Aerospace Aurora theme) */}
-      <section 
+      <section
         ref={heroRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         className="relative min-h-screen pt-32 pb-24 px-6 flex flex-col justify-center overflow-hidden text-slate-800"
       >
-        
+
         {/* Blending Daytime Sky Layers */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
           {/* Sunrise Layer */}
@@ -375,7 +375,7 @@ export default function LandingPage() {
         </div>
 
         {/* Background Cloud Layer (Slow Parallax) */}
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none z-[5] overflow-hidden parallax-layer"
           style={{ transform: 'translateY(calc(var(--scroll-y, 0px) * 0.12))' }}
         >
@@ -404,7 +404,7 @@ export default function LandingPage() {
         </div>
 
         {/* Midground Cloud Layer (Medium Parallax) */}
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none z-10 overflow-hidden parallax-layer"
           style={{ transform: 'translateY(calc(var(--scroll-y, 0px) * 0.32))' }}
         >
@@ -433,7 +433,7 @@ export default function LandingPage() {
         </div>
 
         {/* Foreground Cloud Layer (Fast Parallax, passing in front of everything) */}
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none z-[35] overflow-hidden parallax-layer"
           style={{ transform: 'translateY(calc(var(--scroll-y, 0px) * 0.52))' }}
         >
@@ -463,7 +463,7 @@ export default function LandingPage() {
 
         {/* The Realistic Bobbing SVG Airplane with 3D Mouse Parallax */}
         <div className="absolute right-[5%] md:right-[10%] top-[40%] md:top-[30%] w-[260px] sm:w-[360px] md:w-[500px] h-[160px] sm:h-[220px] md:h-[300px] pointer-events-none animate-jet-glide z-20">
-          <div 
+          <div
             className="w-full h-full parallax-layer preserve-3d"
             style={{
               transform: 'perspective(1200px) rotateX(var(--mouse-rotate-x, 0deg)) rotateY(var(--mouse-rotate-y, 0deg))'
@@ -574,9 +574,9 @@ export default function LandingPage() {
 
         {/* Floating Interactive Key Cards (Aerospace HUD Theme) */}
         <div className="absolute inset-0 pointer-events-none z-30 hidden lg:block">
-          
+
           {/* Card 1: Trainer Development */}
-          <div 
+          <div
             className="absolute right-[45%] top-[20%] pointer-events-auto"
             style={{ transform: 'translate3d(var(--mouse-translate-x, 0px), var(--mouse-translate-y, 0px), 0)' }}
           >
@@ -594,7 +594,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 2: Leadership Growth */}
-          <div 
+          <div
             className="absolute right-[43%] top-[60%] pointer-events-auto"
             style={{ transform: 'translate3d(var(--mouse-translate-x, 0px), var(--mouse-translate-y, 0px), 0)' }}
           >
@@ -612,7 +612,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 3: Performance Tracking */}
-          <div 
+          <div
             className="absolute right-[6%] top-[24%] pointer-events-auto"
             style={{ transform: 'translate3d(var(--mouse-translate-x, 0px), var(--mouse-translate-y, 0px), 0)' }}
           >
@@ -630,7 +630,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 4: Activity Analytics */}
-          <div 
+          <div
             className="absolute right-[4%] top-[62%] pointer-events-auto"
             style={{ transform: 'translate3d(var(--mouse-translate-x, 0px), var(--mouse-translate-y, 0px), 0)' }}
           >
@@ -648,7 +648,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 5: Promotion Pipeline */}
-          <div 
+          <div
             className="absolute right-[28%] top-[76%] pointer-events-auto"
             style={{ transform: 'translate3d(var(--mouse-translate-x, 0px), var(--mouse-translate-y, 0px), 0)' }}
           >
@@ -666,7 +666,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 6: Evaluation Management */}
-          <div 
+          <div
             className="absolute right-[24%] top-[12%] pointer-events-auto"
             style={{ transform: 'translate3d(var(--mouse-translate-x, 0px), var(--mouse-translate-y, 0px), 0)' }}
           >
@@ -682,13 +682,13 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-          
+
         </div>
 
         {/* Hero Content Grid */}
         <div className="relative z-30 max-w-[1400px] mx-auto w-full grid lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7 space-y-8 text-left max-w-3xl">
-            
+
             {/* Glowing Brand Tagline Badge */}
             <div className="inline-flex items-center gap-2 px-4.5 py-2 rounded-full bg-brand/10 border border-brand/20 shadow-soft backdrop-blur-sm transition-all duration-300 hover:border-brand/40 hover:shadow-floating">
               <span className="flex h-2 w-2 relative">
@@ -702,16 +702,16 @@ export default function LandingPage() {
 
             {/* Main Premium Typography Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-outfit text-slate-900 leading-[1.15] tracking-tight">
-              Identify Talent Train Excellence<br />
+              Identify Talent <br/>Train Excellence<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand via-blue-600 to-[#3B82F6] font-extrabold relative">
-                Elevate Leaders
+                Elevate Leaders.
                 <span className="absolute bottom-1.5 left-0 w-full h-[6px] bg-brand-light/35 -z-10 rounded-full"></span>
               </span>
             </h1>
 
             {/* Copy Subtext */}
             <p className="text-lg md:text-xl text-slate-700 leading-relaxed font-sans max-w-2xl">
-              A centralized trainer development ecosystem designed for Rotaract districts to evaluate, track, mentor, and promote future district trainers with precision and transparency.
+             A centralized trainer development ecosystem designed for Rotaract districts to evaluate, track, mentor, and promote future district trainers with precision and transparency.
             </p>
 
             {/* Interactive Call To Actions */}
@@ -722,8 +722,8 @@ export default function LandingPage() {
                   <ArrowRight size={18} className="group-hover:translate-x-1.5 transition-transform" />
                 </Button>
               </Link>
-              
-              <a href="#dashboard-preview" className="inline-flex items-center justify-center font-semibold text-text-main hover:text-brand px-6 py-3 rounded-full hover:bg-white/50 border border-transparent hover:border-surface-border/40 transition-all duration-300 active:scale-95">
+
+              <a href="#dashboard-preview" className="inline-flex items-center justify-center font-semibold text-brand hover:text-[#003080] px-6 py-3 rounded-full hover:bg-brand/5 border border-transparent hover:border-brand/10 transition-all duration-300 active:scale-95">
                 Explore Dashboard
               </a>
             </div>
@@ -731,16 +731,16 @@ export default function LandingPage() {
             {/* Highlighted Trust Markers */}
             <div className="grid grid-cols-3 gap-6 pt-10 border-t border-slate-300/40 max-w-xl">
               <div>
-                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Evaluation Mode</p>
-                <p className="text-lg font-bold text-slate-900 mt-1">Structured RLS</p>
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Trainer Assessment</p>
+                <p className="text-lg font-bold text-slate-900 mt-1">Structured Evaluation</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Role Access</p>
-                <p className="text-lg font-bold text-slate-900 mt-1">Multi-Tier Portal</p>
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Leadership Development</p>
+                <p className="text-lg font-bold text-slate-900 mt-1">Growth Tracking</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Audit Security</p>
-                <p className="text-lg font-bold text-slate-900 mt-1">Supabase DB</p>
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Performance Insights</p>
+                <p className="text-lg font-bold text-slate-900 mt-1">Promotion Pipeline</p>
               </div>
             </div>
 
@@ -753,7 +753,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-[radial-gradient(#CBD5E1_1px,transparent_1px)] bg-[size:24px_24px] opacity-20 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none"></div>
 
         <div className="max-w-[1400px] mx-auto relative z-10">
-          
+
           <div className="text-center max-w-3xl mx-auto mb-20 reveal">
             <Badge variant="brand" className="mb-4 rounded-full px-4 py-1 uppercase tracking-wider text-xs font-semibold shadow-soft">
               Command Deck Preview
@@ -768,7 +768,7 @@ export default function LandingPage() {
 
           {/* Interactive Glassmorphism Dashboard Mockup Container */}
           <div className="relative max-w-[1100px] mx-auto reveal">
-            
+
             {/* Floating Glassmorphic Badges */}
             <div className="absolute -top-8 -left-12 hidden lg:flex items-center gap-3 p-4 rounded-2xl bg-white/70 backdrop-blur-md border border-white shadow-stripe animate-float-slow z-30">
               <div className="w-10 h-10 rounded-xl bg-brand-light flex items-center justify-center text-brand">
@@ -792,7 +792,7 @@ export default function LandingPage() {
 
             {/* Main Dashboard Frame */}
             <div className="glass-premium shadow-floating hover-glow rounded-2xl overflow-hidden grid grid-cols-12 min-h-[580px]">
-              
+
               {/* Mock Sidebar */}
               <div className="col-span-3 bg-slate-50/90 border-r border-slate-200/60 text-slate-600 p-5 flex flex-col justify-between hidden md:flex">
                 <div className="space-y-8">
@@ -834,7 +834,7 @@ export default function LandingPage() {
 
               {/* Mock Main Panel */}
               <div className="col-span-12 md:col-span-9 p-6 sm:p-8 flex flex-col justify-between bg-white/40 backdrop-blur-md">
-                
+
                 {/* Mock Top bar */}
                 <div className="flex justify-between items-center pb-6 border-b border-surface-border/50">
                   <div>
@@ -843,7 +843,7 @@ export default function LandingPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="flex h-2.5 w-2.5 rounded-full bg-semantic-success"></span>
-                    <span className="text-xs font-bold text-text-main font-mono">Live Control</span>
+                    <span className="text-xs font-bold text-text-main font-mono">Controls</span>
                   </div>
                 </div>
 
@@ -853,11 +853,10 @@ export default function LandingPage() {
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-all duration-200 uppercase tracking-wider ${
-                        activeTab === tab 
-                        ? 'bg-brand text-white border-brand shadow-soft' 
-                        : 'bg-white text-text-muted border-surface-border hover:bg-surface-muted'
-                      }`}
+                      className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-all duration-200 uppercase tracking-wider ${activeTab === tab
+                          ? 'bg-brand text-white border-brand shadow-soft'
+                          : 'bg-white text-text-muted border-surface-border hover:bg-surface-muted'
+                        }`}
                     >
                       {tab}
                     </button>
@@ -866,14 +865,14 @@ export default function LandingPage() {
 
                 {/* Mock Active Tab Area */}
                 <div className="flex-grow flex flex-col justify-center min-h-[300px]">
-                  
+
                   {activeTab === 'evaluation' && (
                     <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Radar/Skill Representation */}
                         <div className="glass-premium border-white/40 p-5 rounded-2xl flex flex-col justify-between hover-glow-soft">
                           <p className="text-xs font-bold uppercase tracking-wider text-text-muted">Competency Radar</p>
-                          
+
                           {/* Radial Mock SVG */}
                           <div className="flex items-center justify-center py-4">
                             <svg className="w-28 h-28" viewBox="0 0 100 100">
@@ -894,14 +893,14 @@ export default function LandingPage() {
                               <circle cx="20" cy="40" r="2" fill="#F59E0B" />
                             </svg>
                           </div>
-                          
+
                           <div className="flex justify-between items-center text-[10px] font-bold text-text-muted">
                             <span>Delivery</span>
                             <span>Content</span>
                             <span>Adaptability</span>
                           </div>
                         </div>
- 
+
                         {/* Candidate Progress State */}
                         <div className="glass-premium border-white/40 p-5 rounded-2xl flex flex-col justify-between hover-glow-soft">
                           <div className="flex justify-between items-start">
@@ -911,7 +910,7 @@ export default function LandingPage() {
                             </div>
                             <Badge variant="success">Validated</Badge>
                           </div>
- 
+
                           <div className="space-y-3 pt-4">
                             <div>
                               <div className="flex justify-between text-[10px] text-text-muted mb-1 font-semibold">
@@ -932,17 +931,17 @@ export default function LandingPage() {
                               </div>
                             </div>
                           </div>
- 
+
                           <p className="text-[10px] text-text-muted mt-2 italic">Ready for District Promotion interview approval.</p>
                         </div>
                       </div>
                     </div>
                   )}
- 
+
                   {activeTab === 'activities' && (
                     <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
                       <p className="text-xs font-bold uppercase tracking-wider text-text-muted mb-1">Recent Activity Logs</p>
-                      
+
                       {[
                         { title: 'Project Agni Train-The-Trainer Session', hours: '4.5 hrs', candidate: 'Rtr. Sharon Fernando', tag: 'Co-Pilot' },
                         { title: 'District Assembly Presentation Run', hours: '3.0 hrs', candidate: 'Rtr. Ashan Silva', tag: 'Pre-Flight' },
@@ -966,11 +965,11 @@ export default function LandingPage() {
                       ))}
                     </div>
                   )}
- 
+
                   {activeTab === 'leaderboard' && (
                     <div className="space-y-3 animate-[fadeIn_0.3s_ease-out]">
                       <p className="text-xs font-bold uppercase tracking-wider text-text-muted mb-1">Top Performing Candidates</p>
-                      
+
                       <div className="glass-premium rounded-xl overflow-hidden divide-y divide-slate-200/50">
                         {[
                           { rank: '1', name: 'Rtr. Sharon Fernando', points: '1240 XP', badges: '🥇 Commander', color: 'bg-amber-100 text-amber-600' },
@@ -996,8 +995,8 @@ export default function LandingPage() {
 
                 {/* Dashboard bottom indicator */}
                 <div className="flex justify-between items-center text-[11px] text-text-muted border-t border-surface-border/50 pt-5 mt-4">
-                  <span>Press Shift + C for Command line access</span>
-                  <span>Vite Project • Supabase Auth Integrated</span>
+                 <span>Flight Path to Leadership Excellence</span>
+                <span>Trainer Development Operating System</span>
                 </div>
 
               </div>
@@ -1015,7 +1014,7 @@ export default function LandingPage() {
         <div className="absolute bottom-[20%] right-[-10%] w-[350px] h-[350px] bg-amber-200/20 rounded-full blur-[120px] opacity-30 pointer-events-none"></div>
 
         <div className="max-w-[1400px] mx-auto relative z-10">
-          
+
           <div className="text-center max-w-3xl mx-auto mb-24 reveal">
             <Badge variant="warning" className="mb-4 rounded-full px-4 py-1 uppercase tracking-wider text-xs font-semibold shadow-soft bg-amber-100 text-amber-800 border border-amber-200">
               Career Flight Path
@@ -1030,7 +1029,7 @@ export default function LandingPage() {
 
           {/* Timeline Milestones Grid */}
           <div ref={timelineRef} className="relative max-w-[1200px] mx-auto py-16">
-            
+
             {/* Runway/Flight-Track inspired curved dotted connector line */}
             <div className="absolute top-1/2 left-0 w-full h-[150px] -translate-y-1/2 hidden lg:block z-0 pointer-events-none">
               <svg className="w-full h-full" viewBox="0 0 1200 150" fill="none" preserveAspectRatio="none">
@@ -1042,25 +1041,25 @@ export default function LandingPage() {
                   </linearGradient>
                 </defs>
                 {/* Background Dotted Line */}
-                <path 
-                  d="M 30,75 C 300,10 300,140 600,75 C 900,10 900,140 1170,75" 
-                  stroke="rgba(15,23,42,0.12)" 
-                  strokeWidth="3" 
-                  strokeDasharray="8 8" 
+                <path
+                  d="M 30,75 C 300,10 300,140 600,75 C 900,10 900,140 1170,75"
+                  stroke="rgba(15,23,42,0.12)"
+                  strokeWidth="3"
+                  strokeDasharray="8 8"
                 />
                 {/* Active Colored Trail Drawing on Scroll */}
-                <path 
-                  d="M 30,75 C 300,10 300,140 600,75 C 900,10 900,140 1170,75" 
-                  stroke="url(#active-path-grad)" 
-                  strokeWidth="3" 
-                  strokeDasharray="1200" 
-                  strokeDashoffset={1200 * (1 - scrollProgress)} 
+                <path
+                  d="M 30,75 C 300,10 300,140 600,75 C 900,10 900,140 1170,75"
+                  stroke="url(#active-path-grad)"
+                  strokeWidth="3"
+                  strokeDasharray="1200"
+                  strokeDashoffset={1200 * (1 - scrollProgress)}
                   className="transition-all duration-100 ease-out"
                 />
               </svg>
 
               {/* Scroll-Bound Micro Jet Overlay */}
-              <div 
+              <div
                 className="absolute top-[75px] w-10 h-10 -mt-5 -ml-5 text-brand transition-all duration-100 ease-out"
                 style={{
                   left: `${pathX}%`,
@@ -1072,13 +1071,13 @@ export default function LandingPage() {
             </div>
 
             <div className="grid lg:grid-cols-4 gap-8 relative z-10">
-              
+
               {/* Milestone 1 */}
               <div className="glass-premium shadow-soft p-8 rounded-3xl relative hover-glow group reveal">
                 <div className="absolute top-[-25px] left-8 w-12 h-12 bg-white border border-slate-200 text-brand rounded-2xl flex items-center justify-center font-bold text-lg shadow-soft group-hover:bg-brand group-hover:text-white transition-colors duration-300">
                   1
                 </div>
-                
+
                 <h4 className="text-xl font-bold font-outfit text-slate-900 mb-3 mt-4 flex items-center justify-between">
                   Trainee (Takeoff)
                   <Compass className="text-brand opacity-80" size={20} />
@@ -1092,13 +1091,13 @@ export default function LandingPage() {
                   <Badge variant="default" className="bg-slate-100 text-slate-700 border border-slate-200">Onboarding</Badge>
                 </div>
               </div>
-              
+
               {/* Milestone 2 */}
               <div className="glass-premium shadow-soft p-8 rounded-3xl relative hover-glow group reveal" style={{ transitionDelay: '0.1s' }}>
                 <div className="absolute top-[-25px] left-8 w-12 h-12 bg-white border border-slate-200 text-blue-500 rounded-2xl flex items-center justify-center font-bold text-lg shadow-soft group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
                   2
                 </div>
-                
+
                 <h4 className="text-xl font-bold font-outfit text-slate-900 mb-3 mt-4 flex items-center justify-between">
                   Emerging Trainer
                   <TrendingUp className="text-blue-500 opacity-80" size={20} />
@@ -1108,7 +1107,7 @@ export default function LandingPage() {
                 </p>
 
                 <div className="mt-6 pt-5 border-t border-slate-200 flex gap-2 flex-wrap">
-                  <Badge variant="default" className="bg-slate-100 text-slate-700 border border-slate-200">Hours Logged</Badge>
+                  <Badge variant="default" className="bg-slate-100 text-slate-700 border border-slate-200">Activites Logged</Badge>
                   <Badge variant="default" className="bg-slate-100 text-slate-700 border border-slate-200">Peer Review</Badge>
                 </div>
               </div>
@@ -1163,7 +1162,7 @@ export default function LandingPage() {
       {/* Features & Capabilities Grid */}
       <section className="py-32 px-6 bg-[#f8fafc] border-t border-surface-border/40 relative">
         <div className="max-w-[1400px] mx-auto">
-          
+
           <div className="text-center max-w-3xl mx-auto mb-20 reveal">
             <Badge variant="success" className="mb-4 rounded-full px-4 py-1 uppercase tracking-wider text-xs font-semibold shadow-soft">
               Platform Features
@@ -1177,7 +1176,7 @@ export default function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            
+
             {/* Feature 1 */}
             <Card className="glass-premium hover-glow p-8 rounded-3xl reveal">
               <div className="w-12 h-12 bg-brand-light text-brand rounded-2xl flex items-center justify-center mb-6 shadow-soft">
@@ -1238,9 +1237,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mb-6 shadow-soft">
                 <Shield size={22} />
               </div>
-              <h3 className="text-xl font-bold text-text-main font-outfit mb-3">Supabase RLS Security</h3>
+              <h3 className="text-xl font-bold text-text-main font-outfit mb-3">Protected Training Environment</h3>
               <p className="text-sm text-text-muted leading-relaxed">
-                All data resides safely inside custom PostgreSQL structures protected by hardened Supabase RLS (Row Level Security) schemas.
+                Maintain confidentiality and data integrity with secure access management across all trainer development activities and evaluations.
               </p>
             </Card>
 
@@ -1256,9 +1255,9 @@ export default function LandingPage() {
         <div className="max-w-[1200px] mx-auto glass-premium p-12 md:p-16 rounded-[2.5rem] shadow-soft text-slate-800 relative overflow-hidden reveal border border-white/60 animate-aurora">
           {/* Subtle backgrounds inside stat frame */}
           <div className="absolute right-[-10%] top-[-20%] w-[350px] h-[350px] bg-white/40 rounded-full blur-3xl pointer-events-none"></div>
-          
+
           <div className="relative z-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 justify-center">
-            
+
             {/* Stat 1: Total Trainers */}
             <div className="flex flex-col items-center p-6 bg-white/40 backdrop-blur-md border border-white/60 rounded-3xl hover-glow-soft">
               <div className="relative w-20 h-20 flex items-center justify-center mb-4">
@@ -1267,11 +1266,15 @@ export default function LandingPage() {
                   <circle cx="40" cy="40" r="34" fill="none" stroke="#38BDF8" strokeWidth="5" strokeDasharray="213.6" strokeDashoffset={213.6 * (1 - 0.8)} strokeLinecap="round" />
                 </svg>
                 <div className="font-outfit font-extrabold text-slate-900 text-base">
-                  <Counter value={120} suffix="+" />
+                  <Counter value={4} suffix="+" />
                 </div>
               </div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">Total Trainers</p>
-              <p className="text-[9px] text-slate-500 text-center mt-1">Accredited capacity</p>
+         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">
+  User Roles
+</p>
+<p className="text-[9px] text-slate-500 text-center mt-1">
+  Admins, Trainers & Members
+</p>
             </div>
 
             {/* Stat 2: Activities Completed */}
@@ -1282,11 +1285,15 @@ export default function LandingPage() {
                   <circle cx="40" cy="40" r="34" fill="none" stroke="#10B981" strokeWidth="5" strokeDasharray="213.6" strokeDashoffset={213.6 * (1 - 0.95)} strokeLinecap="round" />
                 </svg>
                 <div className="font-outfit font-extrabold text-slate-900 text-base">
-                  <Counter value={450} suffix="+" />
+                  <Counter value={1} />
                 </div>
               </div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">Activities</p>
-              <p className="text-[9px] text-slate-500 text-center mt-1">Runs completed</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">
+  Unified Platform
+</p>
+<p className="text-[9px] text-slate-500 text-center mt-1">
+  Centralized Management
+</p>
             </div>
 
             {/* Stat 3: Leadership Programs */}
@@ -1297,11 +1304,15 @@ export default function LandingPage() {
                   <circle cx="40" cy="40" r="34" fill="none" stroke="#F59E0B" strokeWidth="5" strokeDasharray="213.6" strokeDashoffset={213.6 * (1 - 0.7)} strokeLinecap="round" />
                 </svg>
                 <div className="font-outfit font-extrabold text-slate-900 text-base">
-                  <Counter value={15} suffix="+" />
+                  24/7
                 </div>
               </div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">Programs</p>
-              <p className="text-[9px] text-slate-500 text-center mt-1">Active curricular courses</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">
+  Accessibility
+</p>
+<p className="text-[9px] text-slate-500 text-center mt-1">
+  Anytime, Anywhere
+</p>
             </div>
 
             {/* Stat 4: Evaluations Completed */}
@@ -1312,11 +1323,15 @@ export default function LandingPage() {
                   <circle cx="40" cy="40" r="34" fill="none" stroke="#38BDF8" strokeWidth="5" strokeDasharray="213.6" strokeDashoffset={213.6 * (1 - 0.85)} strokeLinecap="round" />
                 </svg>
                 <div className="font-outfit font-extrabold text-slate-900 text-base">
-                  <Counter value={320} suffix="+" />
+                  <Counter value={100} suffix="+" />
                 </div>
               </div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">Evaluations</p>
-              <p className="text-[9px] text-slate-500 text-center mt-1">Rubrics completed</p>
+             <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">
+  Transparency
+</p>
+<p className="text-[9px] text-slate-500 text-center mt-1">
+  Track Every Activity
+</p>
             </div>
 
             {/* Stat 5: District Coverage */}
@@ -1327,11 +1342,15 @@ export default function LandingPage() {
                   <circle cx="40" cy="40" r="34" fill="none" stroke="#10B981" strokeWidth="5" strokeDasharray="213.6" strokeDashoffset={213.6 * (1 - 1.0)} strokeLinecap="round" />
                 </svg>
                 <div className="font-outfit font-extrabold text-slate-900 text-base">
-                  <Counter value={100} suffix="%" />
+                  <Counter value={1}  />
                 </div>
               </div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">Coverage</p>
-              <p className="text-[9px] text-slate-500 text-center mt-1">District clubs mapped</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-700 font-mono text-center">
+  Leadership Pipeline
+</p>
+<p className="text-[9px] text-slate-500 text-center mt-1">
+  Develop Future District Trainers
+</p>
             </div>
 
           </div>
@@ -1341,7 +1360,7 @@ export default function LandingPage() {
 
       {/* Footer / CTA Section (Takeoff Sunset visual) */}
       <footer className="py-24 px-6 text-center border-t border-amber-200 bg-gradient-to-t from-[#FFE0B2] via-[#FFF3E0] to-[#FFF9F2] text-slate-800 relative overflow-hidden">
-        
+
         {/* Takeoff Runway Perspective Drawing */}
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[550px] h-[160px] opacity-25 overflow-hidden z-0 pointer-events-none" style={{ perspective: '200px' }}>
           <div className="w-full h-full border-x border-dashed border-slate-400/20 origin-bottom transform rotateX(60deg) flex flex-col justify-between items-center py-4">
@@ -1360,7 +1379,7 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-[800px] mx-auto space-y-8 reveal relative z-10">
-          
+
           <div className="inline-flex w-14 h-14 rounded-2xl bg-white/60 border border-amber-200 text-amber-600 items-center justify-center shadow-soft animate-bounce">
             <Plane size={28} className="rotate-45" />
           </div>

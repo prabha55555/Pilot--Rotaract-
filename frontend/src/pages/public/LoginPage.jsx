@@ -61,7 +61,7 @@ export default function LoginPage() {
         <Card className="p-8 sm:p-10 shadow-floating border-0 bg-white/90 backdrop-blur-xl">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <img src={logo} alt="PILOT" className="h-12 w-auto" />
+            <img src={logo} alt="PILOT" className="h-20 w-auto" />
           </div>
 
           {/* Title */}
