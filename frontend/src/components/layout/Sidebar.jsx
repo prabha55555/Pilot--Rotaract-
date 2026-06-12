@@ -43,13 +43,63 @@ const roleMenus = {
   ],
 }
 
-export const Sidebar = () => {
+export const Sidebar = ({ isMobile = false, onClose = () => {} }) => {
   const { user, userRole } = useAuth()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
   
   const menu = roleMenus[userRole] || []
   const displayName = user?.name || user?.email?.split('@')[0] || 'User'
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      onClose()
+    }
+  }
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col justify-between h-[calc(100%-3rem)] text-text-main">
+        <div className="flex-1 overflow-y-auto no-scrollbar">
+          {/* Navigation */}
+          <nav className="space-y-1.5">
+            {menu.map((item) => {
+              const Icon = item.icon
+              const isActive = location.pathname === item.path
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={handleLinkClick}
+                  className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group ${
+                    isActive
+                      ? 'bg-brand-light text-brand font-semibold shadow-sm'
+                      : 'text-text-muted hover:bg-surface-muted hover:text-text-main font-medium'
+                  }`}
+                >
+                  <Icon size={18} className={`${isActive ? 'text-brand' : 'text-text-light group-hover:text-text-main'} transition-colors`} />
+                  <span className="text-sm tracking-tight">{item.label}</span>
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+
+        {/* User Profile Footer Card */}
+        <div className="pt-4 mt-2 border-t border-surface-border">
+          <div className="flex items-center gap-3 bg-surface-muted p-2 rounded-xl">
+            <div className="w-8 h-8 rounded-lg bg-brand text-white flex items-center justify-center font-bold uppercase flex-shrink-0 text-sm shadow-sm">
+              {displayName.slice(0, 2)}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-text-main truncate capitalize">{displayName}</p>
+              <p className="text-xs text-text-muted truncate">{userRole}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <aside className={`bg-surface rounded-2xl shadow-soft border border-surface-border text-text-main flex flex-col justify-between transition-all duration-300 z-40 sticky top-24 h-[calc(100vh-7rem)] ${

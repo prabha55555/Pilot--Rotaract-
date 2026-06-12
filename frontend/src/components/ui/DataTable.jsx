@@ -196,7 +196,7 @@ export const DataTable = ({
             Previous
           </button>
           
-          <div className="flex items-center gap-1.5">
+          <div className="hidden sm:flex items-center gap-1.5">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <button
                 key={page}
@@ -210,6 +210,10 @@ export const DataTable = ({
                 {page}
               </button>
             ))}
+          </div>
+          
+          <div className="flex sm:hidden text-xs font-semibold text-text-muted">
+            Page {currentPage} of {totalPages}
           </div>
 
           <button

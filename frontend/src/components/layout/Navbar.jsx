@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { LogOut, ChevronDown, Bell, User, Settings } from 'lucide-react'
+import { LogOut, ChevronDown, Bell, User, Settings, Menu, X } from 'lucide-react'
 import logo from '../../utils/logo.png'
 import { formatTimeIST } from '../../utils/date'
 
-export const Navbar = () => {
+export const Navbar = ({ onToggleMenu }) => {
   const { 
     user, 
     userRole, 
@@ -47,9 +47,20 @@ export const Navbar = () => {
     <nav className="bg-white border-b border-surface-border text-text-main sticky top-0 z-50 shadow-sm">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center h-16">
         {/* Logo Section */}
-        <Link to="/" className="flex items-center gap-3 hover:opacity-80 active:scale-95 transition">
-          <img src={logo} alt="PILOT Logo" className="h-12 w-auto" />
-        </Link>
+        <div className="flex items-center">
+          {isAuthenticated && (
+            <button
+              onClick={onToggleMenu}
+              className="p-2 rounded-xl text-text-muted hover:bg-surface-muted hover:text-text-main md:hidden active:scale-95 transition-all mr-2"
+              aria-label="Toggle menu"
+            >
+              <Menu size={22} className="stroke-[2.5]" />
+            </button>
+          )}
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 active:scale-95 transition">
+            <img src={logo} alt="PILOT Logo" className="h-12 w-auto" />
+          </Link>
+        </div>
 
         {isAuthenticated && (
           <div className="flex items-center gap-2 sm:gap-4">
