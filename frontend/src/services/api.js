@@ -151,15 +151,6 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
 
-  uploadFile: (activityId, file) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return apiCall(`/activities/${activityId}/upload`, {
-      method: 'POST',
-      body: formData,
-      headers: {}, // Let browser set Content-Type for FormData
-    })
-  },
 
   // Evaluations
   createEvaluation: (evaluationData) =>

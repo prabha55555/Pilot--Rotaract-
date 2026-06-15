@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { supabase } from '../../services/supabase'
+import { uploadToCloudinary } from '../../services/cloudinary'
 import { 
   Plus, Edit2, Trash2, Check, FileCheck, ArrowUpRight, 
   Search, Filter, X, Eye, FileText, Upload, MapPin, Phone, User as UserIcon, ClipboardList
@@ -313,14 +314,24 @@ export default function ActivitiesPage() {
         showToast('Project created and submitted for review!')
       }
 
-      // 3. Upload new photos
+      // 3. Upload new photos to Cloudinary and register in database
       for (const p of photos) {
-        await api.uploadFile(resultActivity.id, p)
+        const cloudFile = await uploadToCloudinary(p)
+        await api.createActivityFile(resultActivity.id, {
+          file_name: cloudFile.original_name,
+          file_url: cloudFile.url,
+          file_type: cloudFile.format
+        })
       }
 
-      // 4. Upload new PDF report
+      // 4. Upload new PDF report to Cloudinary and register in database
       if (pdfReport) {
-        await api.uploadFile(resultActivity.id, pdfReport)
+        const cloudPdf = await uploadToCloudinary(pdfReport)
+        await api.createActivityFile(resultActivity.id, {
+          file_name: cloudPdf.original_name,
+          file_url: cloudPdf.url,
+          file_type: 'pdf'
+        })
       }
 
       setIsModalOpen(false)
