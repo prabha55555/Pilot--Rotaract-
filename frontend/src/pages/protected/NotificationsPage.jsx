@@ -15,10 +15,21 @@ import { Button } from '../../components/ui/Button'
 import { formatIST } from '../../utils/date'
 
 export default function NotificationsPage() {
-  const { user, fetchNotifications: syncNavbarNotifications } = useAuth()
-  const [notifications, setNotifications] = useState([])
+  const { 
+    user, 
+    notifications, 
+    fetchNotifications, 
+    markAsRead, 
+    markAllAsRead, 
+    clearNotification, 
+    clearAllNotifications 
+  } = useAuth()
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
+  
+  // Track deleting states to prevent duplicate clicks / requests
+  const [deletingIds, setDeletingIds] = useState(new Set())
+  const [clearingAll, setClearingAll] = useState(false)
   
   // Filters State
   const [statusFilter, setStatusFilter] = useState('All') // All | Read | Unread
@@ -32,14 +43,7 @@ export default function NotificationsPage() {
     if (!user) return
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setNotifications(data || [])
+      await fetchNotifications()
     } catch (err) {
       console.error(err)
       showToast('Failed to load notifications history', 'error')
@@ -54,16 +58,8 @@ export default function NotificationsPage() {
 
   const handleMarkAsRead = async (id) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', id)
-
-      if (error) throw error
-      
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+      await markAsRead(id)
       showToast('Notification marked as read')
-      syncNavbarNotifications()
     } catch (err) {
       console.error(err)
       showToast('Failed to mark notification as read', 'error')
@@ -73,16 +69,8 @@ export default function NotificationsPage() {
   const handleMarkAllAsRead = async () => {
     if (!user || notifications.length === 0) return
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user.id)
-
-      if (error) throw error
-
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+      await markAllAsRead()
       showToast('All notifications marked as read')
-      syncNavbarNotifications()
     } catch (err) {
       console.error(err)
       showToast('Failed to mark all as read', 'error')
@@ -90,41 +78,44 @@ export default function NotificationsPage() {
   }
 
   const handleDelete = async (id) => {
+    if (deletingIds.has(id)) return
     if (!window.confirm('Are you sure you want to delete this notification?')) return
+    
+    setDeletingIds(prev => {
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+    
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
-      setNotifications(prev => prev.filter(n => n.id !== id))
+      await clearNotification(id)
       showToast('Notification deleted')
-      syncNavbarNotifications()
     } catch (err) {
       console.error(err)
       showToast('Failed to delete notification', 'error')
+    } finally {
+      setDeletingIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
     }
   }
 
   const handleClearAll = async () => {
+    if (clearingAll) return
     if (!user || notifications.length === 0) return
     if (!window.confirm('Are you sure you want to clear your entire notification history? This cannot be undone.')) return
+    
+    setClearingAll(true)
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('user_id', user.id)
-
-      if (error) throw error
-
-      setNotifications([])
+      await clearAllNotifications()
       showToast('Notification history cleared')
-      syncNavbarNotifications()
     } catch (err) {
       console.error(err)
       showToast('Failed to clear notification history', 'error')
+    } finally {
+      setClearingAll(false)
     }
   }
 
@@ -201,8 +192,9 @@ export default function NotificationsPage() {
           )}
           <button
             onClick={() => handleDelete(row.id)}
+            disabled={deletingIds.has(row.id)}
             title="Delete"
-            className="p-2 bg-rose-50 text-semantic-error hover:bg-semantic-error hover:text-white rounded-lg transition-all"
+            className={`p-2 bg-rose-50 text-semantic-error hover:bg-semantic-error hover:text-white rounded-lg transition-all ${deletingIds.has(row.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <Trash size={13} className="stroke-[2.5]" />
           </button>
@@ -213,6 +205,12 @@ export default function NotificationsPage() {
 
   // Distinct notification types for filter select
   const notificationTypes = Array.from(new Set(notifications.map(n => n.type)))
+
+  const isEmptyInbox = notifications.length === 0
+  const emptyTitle = isEmptyInbox ? 'Inbox is clean!' : 'No matching results'
+  const emptyDescription = isEmptyInbox 
+    ? "You're all caught up! Your notification center is empty." 
+    : 'You have no notifications matching the selected filters.'
 
   return (
     <div className="space-y-6">
@@ -275,9 +273,10 @@ export default function NotificationsPage() {
               variant="danger"
               size="sm"
               onClick={handleClearAll}
+              disabled={clearingAll}
               icon={<Trash2 size={14} />}
             >
-              Clear history
+              {clearingAll ? 'Clearing...' : 'Clear history'}
             </Button>
           )}
         </div>
@@ -295,8 +294,8 @@ export default function NotificationsPage() {
           searchPlaceholder="Search notifications by title or contents..."
           searchKey="title"
           pageSize={10}
-          emptyTitle="Inbox is clean!"
-          emptyDescription="You have no notifications matching the selected filters."
+          emptyTitle={emptyTitle}
+          emptyDescription={emptyDescription}
         />
       )}
 

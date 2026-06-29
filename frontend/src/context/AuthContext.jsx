@@ -206,6 +206,7 @@ export const AuthProvider = ({ children }) => {
       setUnreadCount(c => Math.max(0, c - 1))
     } catch (err) {
       console.error(err)
+      throw err
     }
   }
 
@@ -221,6 +222,7 @@ export const AuthProvider = ({ children }) => {
       setUnreadCount(0)
     } catch (err) {
       console.error(err)
+      throw err
     }
   }
 
@@ -231,10 +233,31 @@ export const AuthProvider = ({ children }) => {
         .delete()
         .eq('id', notifId)
       if (error) throw error
+      
+      const wasUnread = notifications.some(n => n.id === notifId && !n.is_read)
       setNotifications(prev => prev.filter(n => n.id !== notifId))
-      setUnreadCount(c => Math.max(0, c - 1))
+      if (wasUnread) {
+        setUnreadCount(c => Math.max(0, c - 1))
+      }
     } catch (err) {
       console.error(err)
+      throw err
+    }
+  }
+
+  const clearAllNotifications = async () => {
+    if (!user) return
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id)
+      if (error) throw error
+      setNotifications([])
+      setUnreadCount(0)
+    } catch (err) {
+      console.error(err)
+      throw err
     }
   }
 
@@ -302,6 +325,7 @@ export const AuthProvider = ({ children }) => {
       markAsRead,
       markAllAsRead,
       clearNotification,
+      clearAllNotifications,
       removeToast,
       fetchNotifications
     }}>
