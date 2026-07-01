@@ -160,10 +160,14 @@ export default function NotificationsPage() {
       accessor: 'type', 
       sortable: true,
       render: (row) => {
-        let badgeType = 'info'
-        if (row.type === 'promotion' || row.type === 'promote') badgeType = 'success'
-        if (row.type === 'reject') badgeType = 'danger'
-        return <Badge variant={badgeType}>{row.type}</Badge>
+        let badgeVariant = 'brand'
+        const type = row.type?.toLowerCase() || ''
+        if (type.includes('promotion') || type.includes('promote')) badgeVariant = 'success'
+        else if (type.includes('reject')) badgeVariant = 'error'
+        else if (type.includes('cancel')) badgeVariant = 'error'
+        else if (type.includes('submit')) badgeVariant = 'brand'
+        else if (type.includes('plan')) badgeVariant = 'default'
+        return <Badge variant={badgeVariant}>{row.type}</Badge>
       }
     },
     { 

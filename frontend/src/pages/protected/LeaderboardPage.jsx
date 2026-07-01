@@ -38,8 +38,9 @@ export default function LeaderboardPage() {
 
       const { data: activitiesData, error: actsError } = await supabase
         .from('activities')
-        .select('user_id, status')
-        .eq('status', 'Approved') // only count approved activities
+        .select('user_id, status, event_status')
+        .eq('status', 'Approved')
+        .eq('event_status', 'Conducted')
 
       if (actsError) throw actsError
 

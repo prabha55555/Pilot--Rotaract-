@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../services/supabase'
 import { api } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import { 
   FileText, TrendingUp, BarChart3, Award, Calendar, PieChart as PieChartIcon, Activity,
   ArrowUpRight, Download, Filter, Search, ChevronRight
@@ -19,7 +20,8 @@ import { Toast } from '../../components/ui/Toast'
 import { Card } from '../../components/ui/Card'
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState('summary')
+  const { user, userRole } = useAuth()
+  const [activeTab, setActiveTab] = useState(userRole === 'DTD' ? 'approved-reports' : 'summary')
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
 
@@ -30,6 +32,7 @@ export default function ReportsPage() {
   const [promotions, setPromotions] = useState([])
   const [roleDistribution, setRoleDistribution] = useState([])
   const [categoryDistribution, setCategoryDistribution] = useState([])
+  const [approvedReports, setApprovedReports] = useState([])
   
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d']
 
@@ -63,7 +66,7 @@ export default function ReportsPage() {
         
         // Dynamic fallback
         const { data: users } = await supabase.from('users').select('id, name, club, pilot_id').eq('role', role).in('status', ['Active', 'Promoted'])
-        const { data: acts } = await supabase.from('activities').select('user_id').eq('status', 'Approved')
+        const { data: acts } = await supabase.from('activities').select('user_id').eq('status', 'Approved').eq('event_status', 'Conducted')
         
         const counts = {}
         acts?.forEach(a => { counts[a.user_id] = (counts[a.user_id] || 0) + 1 })
@@ -133,6 +136,28 @@ export default function ReportsPage() {
       }, {}) || {}
       setCategoryDistribution(Object.entries(catCounts).map(([name, value]) => ({ name, value })))
 
+      // 5. Load Approved Activities for Report List
+      if (user) {
+        let query = supabase
+          .from('activities')
+          .select('*, user:users!inner(id, name, pilot_id, role, club)')
+          .eq('status', 'Approved')
+          .order('updated_at', { ascending: false })
+
+        if (userRole === 'DTD') {
+          query = query.eq('user_id', user.id)
+        } else if (userRole === 'DT') {
+          query = query.or(`user_id.eq.${user.id},user.role.eq.DTD`)
+        } else if (userRole === 'Admin') {
+          query = query.in('user.role', ['DTD', 'DT'])
+        }
+        // SuperAdmin has access to all approved reports
+
+        const { data: actsData, error: actsError } = await query
+        if (actsError) throw actsError
+        setApprovedReports(actsData || [])
+      }
+
     } catch (err) {
       console.error(err)
       showToast('Error loading report analytics', 'error')
@@ -187,6 +212,63 @@ export default function ReportsPage() {
 
   // Find maximum activity count for monthly chart normalization
   const maxCount = Math.max(...monthlyData.map(d => d.count), 1)
+
+  const approvedReportsColumns = [
+    {
+      header: 'Trainer Name',
+      accessor: 'user.name',
+      sortable: true,
+      render: (row) => (
+        <div>
+          <span className="font-semibold text-text-main text-sm block">{row.user?.name || '-'}</span>
+          <span className="text-[10px] text-text-muted font-bold uppercase block">{row.user?.pilot_id || 'N/A'}</span>
+        </div>
+      )
+    },
+    {
+      header: 'Activity Title',
+      accessor: 'title',
+      sortable: true,
+      render: (row) => <span className="font-semibold text-text-main text-sm block">{row.title}</span>
+    },
+    {
+      header: 'Avenue',
+      accessor: 'avenue',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-light font-medium">{row.avenue || row.category || '-'}</span>
+    },
+    {
+      header: 'Hours Conducted',
+      accessor: 'hours_conducted',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-main font-semibold">{row.hours_conducted ? `${row.hours_conducted} Hours` : '-'}</span>
+    },
+    {
+      header: 'Date Approved',
+      accessor: 'updated_at',
+      sortable: true,
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.updated_at)}</span>
+    },
+    {
+      header: 'Official Report',
+      accessor: 'report_url',
+      render: (row) => (
+        row.report_url ? (
+          <a
+            href={row.report_url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white rounded-lg text-xs font-bold transition-all"
+          >
+            <FileText size={13} />
+            Download PDF
+          </a>
+        ) : (
+          <span className="text-xs text-text-muted italic">Processing...</span>
+        )
+      )
+    }
+  ]
 
   const topMembersColumns = [
     {
@@ -271,49 +353,64 @@ export default function ReportsPage() {
 
       {/* Tabs Menu */}
       <div className="flex border-b border-surface-border gap-6">
+        {userRole !== 'DTD' && (
+          <>
+            <button
+              onClick={() => setActiveTab('summary')}
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+                activeTab === 'summary'
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-text-muted hover:text-text-main'
+              }`}
+            >
+              <BarChart3 size={18} />
+              Monthly Volume
+            </button>
+            <button
+              onClick={() => setActiveTab('distributions')}
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+                activeTab === 'distributions'
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-text-muted hover:text-text-main'
+              }`}
+            >
+              <PieChartIcon size={18} />
+              Distributions
+            </button>
+            <button
+              onClick={() => setActiveTab('top-members')}
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+                activeTab === 'top-members'
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-text-muted hover:text-text-main'
+              }`}
+            >
+              <TrendingUp size={18} />
+              Top Trainers
+            </button>
+            <button
+              onClick={() => setActiveTab('promotions')}
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+                activeTab === 'promotions'
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-text-muted hover:text-text-main'
+              }`}
+            >
+              <Award size={18} />
+              Promotion Audits
+            </button>
+          </>
+        )}
         <button
-          onClick={() => setActiveTab('summary')}
+          onClick={() => setActiveTab('approved-reports')}
           className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'summary'
+            activeTab === 'approved-reports'
               ? 'border-brand text-brand'
               : 'border-transparent text-text-muted hover:text-text-main'
           }`}
         >
-          <BarChart3 size={18} />
-          Monthly Volume
-        </button>
-        <button
-          onClick={() => setActiveTab('distributions')}
-          className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'distributions'
-              ? 'border-brand text-brand'
-              : 'border-transparent text-text-muted hover:text-text-main'
-          }`}
-        >
-          <PieChartIcon size={18} />
-          Distributions
-        </button>
-        <button
-          onClick={() => setActiveTab('top-members')}
-          className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'top-members'
-              ? 'border-brand text-brand'
-              : 'border-transparent text-text-muted hover:text-text-main'
-          }`}
-        >
-          <TrendingUp size={18} />
-          Top Trainers
-        </button>
-        <button
-          onClick={() => setActiveTab('promotions')}
-          className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'promotions'
-              ? 'border-brand text-brand'
-              : 'border-transparent text-text-muted hover:text-text-main'
-          }`}
-        >
-          <Award size={18} />
-          Promotion Audits
+          <FileText size={18} />
+          Approved Reports
         </button>
       </div>
 
@@ -471,6 +568,21 @@ export default function ReportsPage() {
             data={promotions}
             searchPlaceholder="Search log by candidate name..."
             searchKey="candidate.name"
+          />
+        </div>
+      )}
+
+      {activeTab === 'approved-reports' && (
+        <div className="space-y-4">
+          <h3 className="text-base font-semibold text-text-main font-outfit">Approved Activity Reports</h3>
+          <DataTable
+            columns={approvedReportsColumns}
+            data={approvedReports}
+            searchPlaceholder="Search reports by activity title..."
+            searchKey="title"
+            pageSize={10}
+            emptyTitle="No Approved Reports"
+            emptyDescription="There are no approved activity reports currently linked to your workspace."
           />
         </div>
       )}

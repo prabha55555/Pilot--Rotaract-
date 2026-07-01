@@ -8,7 +8,7 @@ import { formatIST, formatDateIST } from '../../utils/date'
 import { 
   Calendar, MapPin, ClipboardList, User, Phone, 
   FileText, ExternalLink, Download, Clock, MessageSquare,
-  Image, AlertCircle
+  Image, AlertCircle, Award
 } from 'lucide-react'
 
 export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
@@ -114,16 +114,31 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
               </div>
             </div>
             <Badge variant={
-              activity.status === 'Approved' ? 'success' :
+              activity.status === 'Event Conducted' ? 'success' :
+              activity.status === 'Event Cancelled' ? 'error' :
               activity.status === 'Rejected' ? 'error' :
-              activity.status === 'Submitted' ? 'warning' :
-              activity.status === 'Pending Review' ? 'warning' :
-              activity.status === 'Resubmitted' ? 'warning' :
+              ['Submitted for Approval', 'Under Review', 'Resubmitted'].includes(activity.status) ? 'warning' :
+              activity.status === 'Planned' ? 'brand' :
+              activity.status === 'Draft' ? 'draft' :
               'default'
             }>
               {activity.status}
             </Badge>
           </div>
+
+          {/* Cancellation Banner */}
+          {activity.status === 'Event Cancelled' && (
+            <div className="p-4 bg-red-50 border border-red-200 text-red-900 rounded-xl space-y-1">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-red-600 flex items-center gap-1.5">
+                <AlertCircle size={14} />
+                Event Cancelled
+              </h4>
+              <p className="text-xs font-semibold">Reason: <span className="font-medium text-red-700">{activity.cancellation_reason || 'Other'}</span></p>
+              {activity.additional_remarks && (
+                <p className="text-xs font-semibold">Remarks: <span className="font-medium text-red-700">{activity.additional_remarks}</span></p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Left Column: Details & Event Metadata */}
@@ -140,16 +155,49 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
                 </p>
               </div>
 
+              {/* Objectives */}
+              {activity.objectives && (
+                <div>
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <ClipboardList size={14} />
+                    Objectives of the Event
+                  </h3>
+                  <p className="text-sm text-text-main leading-relaxed bg-surface-muted p-4 rounded-xl font-medium border border-surface-border whitespace-pre-line">
+                    {activity.objectives}
+                  </p>
+                </div>
+              )}
+
+              {/* MOM Summary */}
+              {activity.mom && (
+                <div>
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <ClipboardList size={14} />
+                    Minutes of Meeting (MOM) / Event Details
+                  </h3>
+                  <p className="text-sm text-text-main leading-relaxed bg-surface-muted p-4 rounded-xl font-medium border border-surface-border whitespace-pre-line">
+                    {activity.mom}
+                  </p>
+                </div>
+              )}
+
               {/* Event Metadata Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 border border-surface-border rounded-xl">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Project Metadata</span>
-                  <p className="text-xs font-semibold text-text-main">
-                    Type: <span className="text-text-muted font-medium">{activity.project_type || '-'}</span>
-                  </p>
-                  <p className="text-xs font-semibold text-text-main mt-1">
-                    Mode: <span className="text-text-muted font-medium">{activity.project_mode || '-'}</span>
-                  </p>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Project Specifications</span>
+                  <div className="space-y-1.5 text-xs font-semibold text-text-main">
+                    <p>Type: <span className="text-text-muted font-medium">{activity.project_type || '-'}</span></p>
+                    <p>Mode: <span className="text-text-muted font-medium">{activity.project_mode || '-'}</span></p>
+                    <p>Expected Duration: <span className="text-text-muted font-medium">{activity.expected_duration ? `${activity.expected_duration} hrs` : '-'}</span></p>
+                    <p>Expected Participants: <span className="text-text-muted font-medium">{activity.expected_participants || '-'}</span></p>
+                    
+                    {activity.hours_conducted && (
+                      <p>Actual Hours Conducted: <span className="text-text-muted font-medium">{activity.hours_conducted} hrs</span></p>
+                    )}
+                    {activity.num_participants && (
+                      <p>Actual Participants: <span className="text-text-muted font-medium">{activity.num_participants}</span></p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="p-4 border border-surface-border rounded-xl flex items-start gap-3">
@@ -284,6 +332,43 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
                   </div>
                 )}
               </div>
+
+              {/* Approved System Report PDF */}
+              {activity.report_url && (
+                <div>
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Award size={14} className="text-emerald-500" />
+                    Approved System Report
+                  </h3>
+                  <div className="p-4 bg-emerald-50/20 border border-emerald-100 rounded-xl flex flex-col gap-3">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <FileText size={22} className="text-emerald-500 flex-shrink-0" />
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-bold text-text-main truncate leading-snug">Official_Activity_Report.pdf</p>
+                        <p className="text-[9px] text-emerald-600 font-bold uppercase">System Generated Report</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <a 
+                        href={activity.report_url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700 rounded-lg transition-all"
+                      >
+                        <ExternalLink size={12} />
+                        View Report
+                      </a>
+                      <a 
+                        href={activity.report_url} 
+                        download={`Approved_Report_${activity.id}.pdf`}
+                        className="inline-flex items-center justify-center px-3 py-2 bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold rounded-lg transition-all"
+                      >
+                        <Download size={12} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Leadership info */}
               <div>

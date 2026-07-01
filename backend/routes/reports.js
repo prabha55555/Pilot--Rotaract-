@@ -28,6 +28,8 @@ router.get('/monthly', async (req, res) => {
     const { data, error } = await supabase
       .from('activities')
       .select('created_at')
+      .eq('status', 'Approved')
+      .eq('event_status', 'Conducted')
 
     if (error) throw error
 

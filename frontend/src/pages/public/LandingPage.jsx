@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Plane, Cloud, Sparkles, LogIn } from 'lucide-react'
+import { ArrowRight, Plane, Cloud, Sparkles, LogIn, Users, TrendingUp, Award, ShieldCheck, User } from 'lucide-react'
 import logo from '../../utils/logo.png'
+import airplane from '../../utils/airplane.png'
+import sunsetSkyBg from '../../utils/sunset_sky_bg.png'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 
@@ -163,7 +165,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#fafafc] text-text-main font-sans selection:bg-brand-light selection:text-brand overflow-x-hidden relative flex flex-col justify-between">
-      
+
       {/* Stylesheet for custom logo animation, marquees and reveal transitions */}
       <style>{`
         /* Continuous SVG Outer Path Draw loop */
@@ -298,20 +300,24 @@ export default function LandingPage() {
       </svg>
 
       {/* Premium Sticky Glassmorphic Navbar */}
-      <nav className="fixed top-0 left-0 w-full z-50 py-4 px-6 bg-white/70 backdrop-blur-md border-b border-slate-200/50 transition-all duration-300 text-slate-800">
+      <nav className="fixed top-0 left-0 w-full z-50 py-4 px-6 bg-[#E8E9F7]/95 backdrop-blur-md border-b border-slate-200/50 transition-all duration-300 text-slate-800">
         <div className="max-w-[1400px] mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3 group">
-            <img src={logo} alt="PILOT" className="h-11 w-auto transition-transform duration-300 group-hover:scale-105" />
-            <div className="w-1.5 h-6 bg-brand/40 rounded-full hidden md:block"></div>
-            <span className="text-xs font-semibold text-brand tracking-widest uppercase font-mono hidden md:block">
-              District 3220 Control
+            {/* Square PILOT logo badge (dark navy blue, rounded corners ~8px) */}
+            <div className="p-1 bg-[#003DA5] rounded-lg shadow-md flex items-center justify-center">
+              <img src={logo} alt="PILOT" className="h-9 w-9 object-contain rounded-md" />
+            </div>
+            <div className="w-[1.5px] h-6 bg-[#003DA5]/30 hidden md:block"></div>
+            <span className="text-xs font-bold text-[#003DA5] tracking-widest uppercase font-mono hidden md:block">
+              DISTRICT 3220 CONTROL
             </span>
           </div>
 
           <div className="flex items-center gap-4">
             <Link to="/login">
-              <Button variant="secondary" className="px-5 py-2 text-xs font-semibold rounded-full border border-slate-200 hover:border-brand/40 shadow-soft bg-white text-slate-700 hover:bg-slate-50 transition-all duration-300 hover:scale-105 active:scale-95">
-                {isAuthenticated ? 'Enter Workspace' : 'Sign In'}
+              <Button variant="outline" className="px-5 py-2 text-xs font-bold rounded-full border-2 border-[#003DA5] text-[#003DA5] bg-transparent hover:bg-[#003DA5] hover:text-white transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-1.5 shadow-sm">
+                <User size={14} />
+                Sign In
               </Button>
             </Link>
           </div>
@@ -323,442 +329,195 @@ export default function LandingPage() {
         ref={heroRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="relative pt-32 pb-16 px-6 flex flex-col justify-center overflow-hidden text-slate-800 flex-grow"
+        className="relative pt-32 md:pt-32 pb-12 px-6 flex flex-col justify-center overflow-hidden text-slate-800 flex-grow"
+        style={{
+          background: 'radial-gradient(120% 120% at 50% 10%, #F5F7FF 0%, #FAFAFC 50%, #FFFFFF 100%)',
+        }}
       >
-        {/* Blending Daytime Sky Layers */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-b from-[#ff9a9e] via-[#fecfef] to-[#feebd0] animate-daylight-sunrise"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-[#2980B9] via-[#6DD5FA] to-[#FFFFFF] animate-daylight-morning"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-[#F85F73] via-[#ffc3a0] to-[#FBE555] animate-daylight-golden"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-[#4568DC] via-[#B06AB3] to-[#feb47b] animate-daylight-sunset"></div>
-        </div>
-
-        {/* Volumetric Sunbeams & Sunlight Orb */}
-        <div className="absolute left-[15%] -top-[100px] w-[500px] h-[900px] bg-gradient-to-b from-white/30 via-white/10 to-transparent animate-spotlight blur-xl pointer-events-none z-10 origin-top"></div>
-        <div className="absolute left-[35%] -top-[100px] w-[600px] h-[1000px] bg-gradient-to-b from-amber-200/20 via-amber-100/5 to-transparent animate-spotlight blur-3xl pointer-events-none z-10 origin-top" style={{ animationDelay: '-6s' }}></div>
-
-        {/* Cinematic Daytime Sun */}
-        <div className="absolute top-[8%] left-[28%] w-[220px] h-[220px] rounded-full bg-gradient-to-br from-white via-amber-100 to-yellow-50 opacity-80 blur-xl pointer-events-none z-0 animate-sun-rotate"></div>
-        <div className="absolute top-[10%] left-[30%] w-10 h-10 rounded-full bg-white blur-sm pointer-events-none z-0"></div>
-
         {/* Sky / HUD Grid Background Effects */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.012)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.012)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_70%,transparent_100%)] pointer-events-none z-0"></div>
-        <div className="absolute top-[15%] right-[-5%] w-[600px] h-[600px] bg-sky-300/15 rounded-full blur-[140px] opacity-70 pointer-events-none z-0"></div>
-        <div className="absolute bottom-[10%] left-[-10%] w-[500px] h-[500px] bg-amber-200/15 rounded-full blur-[140px] opacity-50 pointer-events-none z-0"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,61,165,0.012)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,61,165,0.012)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_70%,transparent_100%)] pointer-events-none z-0"></div>
 
         {/* Aerospace HUD Pitch Ladder Left */}
-        <div className="absolute left-[5%] top-[25%] h-[40%] w-[60px] border-r border-slate-400/20 flex flex-col justify-between py-6 font-mono text-[9px] text-slate-500/40 z-15 pointer-events-none hidden md:flex">
-          <div className="flex items-center gap-1.5 justify-end"><span>+10</span><div className="w-4 h-[1px] bg-slate-400/30"></div></div>
-          <div className="flex items-center gap-1.5 justify-end"><span>+05</span><div className="w-2 h-[1px] bg-slate-400/20"></div></div>
-          <div className="flex items-center gap-1.5 justify-end"><span>00</span><div className="w-6 h-[1px] bg-slate-400/40"></div></div>
-          <div className="flex items-center gap-1.5 justify-end"><span>-05</span><div className="w-2 h-[1px] bg-slate-400/20"></div></div>
-          <div className="flex items-center gap-1.5 justify-end"><span>-10</span><div className="w-4 h-[1px] bg-slate-400/30"></div></div>
+        <div className="absolute left-[5%] top-[25%] h-[40%] w-[60px] border-r border-[#003DA5]/8 flex flex-col justify-between py-6 font-mono text-[9px] text-[#003DA5]/20 z-15 pointer-events-none hidden md:flex">
+          <div className="flex items-center gap-1.5 justify-end"><span>+10</span><div className="w-4 h-[1px] bg-[#003DA5]/10"></div></div>
+          <div className="flex items-center gap-1.5 justify-end"><span>+05</span><div className="w-2 h-[1px] bg-[#003DA5]/5"></div></div>
+          <div className="flex items-center gap-1.5 justify-end"><span>00</span><div className="w-6 h-[1px] bg-[#003DA5]/15"></div></div>
+          <div className="flex items-center gap-1.5 justify-end"><span>-05</span><div className="w-2 h-[1px] bg-[#003DA5]/5"></div></div>
+          <div className="flex items-center gap-1.5 justify-end"><span>-10</span><div className="w-4 h-[1px] bg-[#003DA5]/10"></div></div>
         </div>
 
-        {/* Aerospace HUD Pitch Ladder Right */}
-        <div className="absolute right-[5%] top-[25%] h-[40%] w-[60px] border-l border-slate-400/20 flex flex-col justify-between py-6 font-mono text-[9px] text-slate-500/40 z-15 pointer-events-none hidden md:flex">
-          <div className="flex items-center gap-1.5 justify-start"><div className="w-4 h-[1px] bg-slate-400/30"></div><span>+10</span></div>
-          <div className="flex items-center gap-1.5 justify-start"><div className="w-2 h-[1px] bg-slate-400/20"></div><span>+05</span></div>
-          <div className="flex items-center gap-1.5 justify-start"><div className="w-6 h-[1px] bg-slate-400/40"></div><span>00</span></div>
-          <div className="flex items-center gap-1.5 justify-start"><div className="w-2 h-[1px] bg-slate-400/20"></div><span>-05</span></div>
-          <div className="flex items-center gap-1.5 justify-start"><div className="w-4 h-[1px] bg-slate-400/30"></div><span>-10</span></div>
-        </div>
-
-        {/* Heading Compass Bar */}
-        <div className="absolute top-[100px] left-1/2 -translate-x-1/2 w-[280px] h-[30px] border-b border-slate-400/20 overflow-hidden flex flex-col justify-end font-mono text-[10px] text-slate-500/40 z-15 pointer-events-none hidden sm:flex">
-          <div className="flex justify-between items-end px-4">
-            <span>W</span><span>28</span><span>29</span><span className="text-slate-700 font-bold">30</span><span>31</span><span>32</span><span>N</span>
-          </div>
-          <div className="flex justify-between px-[18px]">
-            <div className="w-[1px] h-1 bg-slate-400/30"></div>
-            <div className="w-[1px] h-1.5 bg-slate-400/40"></div>
-            <div className="w-[1px] h-1 bg-slate-400/30"></div>
-            <div className="w-[1px] h-2 bg-slate-600 font-bold"></div>
-            <div className="w-[1px] h-1 bg-slate-400/30"></div>
-            <div className="w-[1px] h-1.5 bg-slate-400/40"></div>
-            <div className="w-[1px] h-1 bg-slate-400/30"></div>
-          </div>
-        </div>
-
-        {/* Animated Rotating Radar */}
-        <div className="absolute right-[12%] top-[15%] w-[220px] h-[220px] rounded-full border border-slate-300/30 bg-white/10 pointer-events-none z-[1] hidden lg:block overflow-hidden opacity-40">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-[180px] h-[180px] rounded-full border border-dashed border-slate-400/20"></div>
-            <div className="w-[120px] h-[120px] rounded-full border border-slate-400/20"></div>
-            <div className="w-[60px] h-[60px] rounded-full border border-dashed border-slate-400/20"></div>
-            <div className="absolute w-full h-[1px] bg-slate-400/20"></div>
-            <div className="absolute h-full w-[1px] bg-slate-400/20"></div>
-          </div>
-          <div className="absolute inset-0 animate-radar-sweep">
-            <div className="w-1/2 h-full bg-gradient-to-r from-transparent to-brand/20 origin-right transform rotate-180"></div>
-          </div>
-          <div className="absolute top-[35%] left-[25%] w-2.5 h-2.5 rounded-full bg-brand animate-pulse-glow z-10"></div>
-          <div className="absolute top-[35%] left-[25%] w-6 h-6 rounded-full border border-brand/30 animate-radar-ping z-0"></div>
-          <span className="absolute top-[28%] left-[29%] font-mono text-[8px] text-slate-600">TRK-032</span>
-
-          <div className="absolute top-[60%] left-[70%] w-2 h-2 rounded-full bg-brand animate-pulse-glow z-10" style={{ animationDelay: '1.5s' }}></div>
-          <div className="absolute top-[60%] left-[70%] w-5 h-5 rounded-full border border-brand/30 animate-radar-ping z-0" style={{ animationDelay: '1.5s' }}></div>
-          <span className="absolute top-[54%] left-[74%] font-mono text-[8px] text-slate-600">TRK-220</span>
-
-          <div className="absolute bottom-2 left-2 font-mono text-[8px] text-slate-500 flex flex-col">
-            <span>HDG: 320°</span>
-            <span>SYS: SCANNING</span>
-          </div>
-        </div>
-
-        {/* 3D Runway HUD Visual */}
-        <div className="absolute bottom-0 left-0 w-full h-[140px] pointer-events-none overflow-hidden z-10 flex justify-center items-end opacity-20">
-          <svg className="w-[800px] h-full" viewBox="0 0 800 100" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="runway-grad" x1="0%" y1="100%" x2="0%" y2="0%">
-                <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.8" />
-                <stop offset="60%" stopColor="#38BDF8" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="#38BDF8" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <polygon points="100,100 380,10 420,10 700,100" fill="none" stroke="url(#runway-grad)" strokeWidth="2" opacity="0.6" />
-            <line x1="395" y1="10" x2="150" y2="100" stroke="#38BDF8" strokeWidth="2" strokeDasharray="10 15" className="animate-runway" />
-            <line x1="405" y1="10" x2="650" y2="100" stroke="#38BDF8" strokeWidth="2" strokeDasharray="10 15" className="animate-runway" />
-            <line x1="400" y1="10" x2="400" y2="100" stroke="#38BDF8" strokeWidth="3" strokeDasharray="20 20" className="animate-runway" />
-            <text x="382" y="90" fill="#38BDF8" fontSize="16" fontFamily="monospace" fontWeight="bold" opacity="0.8">32</text>
-            <text x="408" y="90" fill="#38BDF8" fontSize="16" fontFamily="monospace" fontWeight="bold" opacity="0.8">20</text>
+        {/* Decorative subtle HUD Radar in upper-right background */}
+        <div className="absolute right-[8%] top-[18%] w-[280px] h-[280px] opacity-10 pointer-events-none z-10 hidden lg:block">
+          <svg viewBox="0 0 200 200" className="w-full h-full stroke-[#003DA5]/10" fill="none" strokeWidth="0.5">
+            <circle cx="100" cy="100" r="80" strokeDasharray="3 3" />
+            <circle cx="100" cy="100" r="50" />
+            <circle cx="100" cy="100" r="20" strokeDasharray="1 1" />
+            <line x1="100" y1="10" x2="100" y2="190" strokeDasharray="4 4" />
+            <line x1="10" y1="100" x2="190" y2="100" strokeDasharray="4 4" />
+            <text x="96" y="25" fill="#003DA5" fontSize="10" fontFamily="monospace" fontWeight="bold">N</text>
+            <text x="175" y="103" fill="#003DA5" fontSize="8" fontFamily="monospace">E</text>
           </svg>
         </div>
 
-        {/* Ambient Sky Particles */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-          {particles.map((p, i) => (
-            <div
-              key={i}
-              className="absolute bottom-0 bg-gradient-to-t from-amber-250 to-white rounded-full animate-sky-particle"
-              style={{
-                left: `${p.left}%`,
-                width: `${p.size}px`,
-                height: `${p.size}px`,
-                opacity: p.opacity,
-                animationDelay: `${p.delay}s`,
-                animationDuration: `${p.duration}s`,
-              }}
-            />
-          ))}
-        </div>
+        {/* Hero Content Split Grid */}
+        <div className="relative z-30 max-w-[1400px] mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center flex-grow pt-4 pb-12">
 
-        {/* Background Cloud Layer */}
-        <div
-          className="absolute inset-0 pointer-events-none z-[5] overflow-hidden parallax-layer"
-          style={{ transform: 'translateY(calc(var(--scroll-y, 0px) * 0.12))' }}
-        >
-          {/* Cloud 1 */}
-          <div className="absolute top-[8%] w-[160px] h-[80px] opacity-35 animate-cloud-slow" style={{ animationDelay: '-8s' }}>
-            <svg viewBox="0 0 200 100" className="w-full h-full drop-shadow-md">
-              <defs>
-                <linearGradient id="cloud-slow-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#FFFFFF" />
-                  <stop offset="100%" stopColor="#E2E8F0" />
-                </linearGradient>
-              </defs>
-              <path d="M20,70 C20,55 40,45 60,50 C70,35 100,30 120,40 C135,30 160,40 160,55 C175,55 185,65 180,75 C185,85 170,95 150,95 C110,95 50,95 20,95 C10,95 5,85 20,70 Z" fill="#CBD5E1" opacity="0.3" transform="translate(4, 4)" />
-              <path d="M20,70 C20,55 40,45 60,50 C70,35 100,30 120,40 C135,30 160,40 160,55 C175,55 185,65 180,75 C185,85 170,95 150,95 C110,95 50,95 20,95 C10,95 5,85 20,70 Z" fill="url(#cloud-slow-grad)" />
-            </svg>
-          </div>
-          {/* Cloud 2 */}
-          <div className="absolute top-[28%] w-[200px] h-[100px] opacity-30 animate-cloud-slow" style={{ animationDelay: '-35s' }}>
-            <svg viewBox="0 0 200 100" className="w-full h-full drop-shadow-md">
-              <path d="M20,70 C20,55 40,45 60,50 C70,35 100,30 120,40 C135,30 160,40 160,55 C175,55 185,65 180,75 C185,85 170,95 150,95 C110,95 50,95 20,95 C10,95 5,85 20,70 Z" fill="#CBD5E1" opacity="0.25" transform="translate(4, 4)" />
-              <path d="M20,70 C20,55 40,45 60,50 C70,35 100,30 120,40 C135,30 160,40 160,55 C175,55 185,65 180,75 C185,85 170,95 150,95 C110,95 50,95 20,95 C10,95 5,85 20,70 Z" fill="url(#cloud-slow-grad)" />
-            </svg>
-          </div>
-        </div>
+          {/* Left Column Area (Part 1: Circular Logo Badge, Part 2: Stacked Content below it) */}
+          <div className="md:col-span-7 flex flex-col md:flex-row items-center gap-8 md:gap-12 animate-fade-in-up order-1 md:order-none">
 
-        {/* Midground Cloud Layer */}
-        <div
-          className="absolute inset-0 pointer-events-none z-10 overflow-hidden parallax-layer"
-          style={{ transform: 'translateY(calc(var(--scroll-y, 0px) * 0.32))' }}
-        >
-          {/* Cloud 3 */}
-          <div className="absolute top-[42%] w-[240px] h-[120px] opacity-45 animate-cloud-med" style={{ animationDelay: '-18s' }}>
-            <svg viewBox="0 0 200 100" className="w-full h-full drop-shadow-md">
-              <path d="M20,70 C20,55 40,45 60,50 C70,35 100,30 120,40 C135,30 160,40 160,55 C175,55 185,65 180,75 C185,85 170,95 150,95 C110,95 50,95 20,95 C10,95 5,85 20,70 Z" fill="#CBD5E1" opacity="0.3" transform="translate(4, 4)" />
-              <path d="M20,70 C20,55 40,45 60,50 C70,35 100,30 120,40 C135,30 160,40 160,55 C175,55 185,65 180,75 C185,85 170,95 150,95 C110,95 50,95 20,95 C10,95 5,85 20,70 Z" fill="url(#cloud-slow-grad)" />
-            </svg>
-          </div>
-        </div>
+            {/* 1. Circular Logo Badge (~280px diameter) */}
+            <div className="relative flex items-center justify-center p-6 w-[280px] h-[280px] shrink-0">
+              {/* Outer thin dashed circle ring with dot accents */}
+              <div className="absolute inset-0 rounded-full border border-dashed border-[#003DA5]/15 animate-[spin_60s_linear_infinite] pointer-events-none">
+                <div className="absolute top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#003DA5]/20"></div>
+                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#003DA5]/20"></div>
+              </div>
 
-        {/* Realistic Bobbing Jet with 3D Mouse Parallax */}
-        <div className="absolute right-[5%] md:right-[10%] top-[35%] md:top-[28%] w-[260px] sm:w-[360px] md:w-[480px] h-[160px] sm:h-[220px] md:h-[280px] pointer-events-none animate-jet-glide z-20">
-          <div
-            className="w-full h-full parallax-layer preserve-3d"
-            style={{
-              transform: 'perspective(1200px) rotateX(var(--mouse-rotate-x, 0deg)) rotateY(var(--mouse-rotate-y, 0deg))'
-            }}
-          >
-            <svg viewBox="0 0 600 300" className="w-full h-full filter drop-shadow-[0_15px_35px_rgba(253,186,116,0.35)]" style={{ overflow: 'visible' }}>
-              <defs>
-                <linearGradient id="fuselageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#FFFFFF" />
-                  <stop offset="30%" stopColor="#FFFDF5" />
-                  <stop offset="70%" stopColor="#F8FAFC" />
-                  <stop offset="100%" stopColor="#CBD5E1" />
-                </linearGradient>
-                <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#3B82F6" />
-                  <stop offset="100%" stopColor="#003DA5" />
-                </linearGradient>
-                <linearGradient id="metalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#94A3B8" />
-                  <stop offset="50%" stopColor="#475569" />
-                  <stop offset="100%" stopColor="#1E293B" />
-                </linearGradient>
-                <linearGradient id="windowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#38BDF8" />
-                  <stop offset="100%" stopColor="#0284C7" />
-                </linearGradient>
-                <linearGradient id="contrailGrad" x1="100%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#FFF" stopOpacity="0.95" />
-                  <stop offset="30%" stopColor="#FEF3C7" stopOpacity="0.7" />
-                  <stop offset="70%" stopColor="#FFF" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#FFF" stopOpacity="0" />
-                </linearGradient>
-                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-              </defs>
+              {/* Inner solid navy blue filled circle */}
+              <div className="w-[220px] h-[220px] rounded-full bg-[#003DA5] flex flex-col items-center justify-center p-6 shadow-2xl relative transition-all duration-700 hover:scale-105 hover:shadow-[0_20px_50px_rgba(0,61,165,0.25)]">
+                {/* Inner Logo image */}
+                <img src={logo} alt="PILOT Logo" className="w-[170px] h-auto object-contain rounded-md" />
+              </div>
+            </div>
 
-              {/* Glowing Contrails */}
-              <path d="M 335,129.5 C 180,135 40,145 -350,150" fill="none" stroke="url(#contrailGrad)" strokeWidth="5" strokeLinecap="round" opacity="0.8" />
-              <path d="M 340,154 C 185,160 45,170 -350,175" fill="none" stroke="url(#contrailGrad)" strokeWidth="7" strokeLinecap="round" opacity="0.8" />
+            {/* 2. Headline & Stacked Text Block */}
+            <div className="flex flex-col items-start text-left space-y-5 max-w-md">
+              {/* Version Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-soft">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#003DA5] font-mono">
+                  PILOT PLATFORM V2.0
+                </span>
+              </div>
 
-              {/* Far Wing */}
-              <path d="M 330,130 L 410,50 C 418,42 428,42 432,48 L 435,55 L 370,120 Z" fill="#94A3B8" />
-              <path d="M 410,50 L 418,35 L 414,35 L 406,48 Z" fill="#003DA5" />
+              {/* Headline */}
+              <h1 className="text-5xl sm:text-5xl md:text-4xl lg:text-[48px] xl:text-[52px] font-extrabold font-outfit text-[#0C122C] leading-tight tracking-tight">
+                Identify. Train.<br />
+                <span className="text-[#003DA5] font-extrabold">
+                  Empower. Lead.
+                </span>
+              </h1>
 
-              {/* Engine Far */}
-              <rect x="335" y="122" width="45" height="15" rx="7" fill="url(#metalGrad)" />
-              <ellipse cx="335" cy="129.5" rx="4" ry="7.5" fill="#1E293B" />
+              {/* Subtext description */}
+              <p className="text-xs md:text-sm lg:text-base text-slate-600 leading-relaxed font-sans">
+                A comprehensive platform for discovering, developing, and tracking district trainers for a stronger tomorrow.
+              </p>
 
-              {/* Fuselage */}
-              <path d="M 160,190 C 220,195 320,175 420,145 C 520,115 580,90 605,80 C 612,77 615,73 607,73 C 557,75 467,90 367,110 C 267,130 187,155 150,170 C 142,173 145,188 160,190 Z" fill="url(#fuselageGrad)" />
-              <path d="M 200,173 C 280,165 370,143 470,113 C 530,95 575,81 592,75 C 590,77 580,81 560,88 C 470,115 370,138 280,158 C 210,173 201,173 200,173 Z" fill="url(#brandGrad)" opacity="0.95" />
-
-              {/* Cockpit Window */}
-              <path d="M 565,83 C 560,84 555,87 558,91 L 565,90 Z" fill="url(#windowGrad)" />
-
-              {/* Passenger Windows */}
-              <circle cx="260" cy="148" r="2.5" fill="#334155" opacity="0.6" />
-              <circle cx="280" cy="144" r="2.5" fill="#334155" opacity="0.6" />
-              <circle cx="300" cy="140" r="2.5" fill="#334155" opacity="0.6" />
-              <circle cx="320" cy="136" r="2.5" fill="#334155" opacity="0.6" />
-              <circle cx="340" cy="132" r="2.5" fill="#334155" opacity="0.6" />
-              <circle cx="360" cy="128" r="2.5" fill="#334155" opacity="0.6" />
-              <circle cx="380" cy="124" r="2.5" fill="#334155" opacity="0.6" />
-              <circle cx="400" cy="120" r="2.5" fill="#334155" opacity="0.6" />
-              <circle cx="420" cy="116" r="2.5" fill="#334155" opacity="0.6" />
-              <circle cx="440" cy="112" r="2.5" fill="#334155" opacity="0.6" />
-
-              {/* Tail Fin */}
-              <path d="M 185,170 L 145,75 C 142,68 152,65 158,70 L 220,158 Z" fill="url(#brandGrad)" />
-              <path d="M 160,78 L 155,70 L 163,68 L 175,85 Z" fill="#38BDF8" />
-
-              {/* Horizontal Stabilizer */}
-              <path d="M 170,175 L 125,188 C 120,190 118,185 124,182 L 180,168 Z" fill="#64748B" />
-
-              {/* Near Wing */}
-              <path d="M 330,138 L 440,240 C 448,248 458,248 462,242 L 470,230 L 395,125 Z" fill="url(#fuselageGrad)" />
-              <path d="M 440,240 L 452,258 L 448,258 L 432,238 Z" fill="#003DA5" />
-
-              {/* Engine Near */}
-              <rect x="340" y="145" width="50" height="18" rx="9" fill="url(#metalGrad)" />
-              <ellipse cx="340" cy="154" rx="5" ry="9" fill="#1E293B" />
-              {/* Near Engine Thrust Glow */}
-              <polygon points="390,147 415,152 415,156 390,161" fill="#FBBF24" opacity="0.8" filter="url(#glow)" />
-              <polygon points="390,150 405,153 405,155 390,158" fill="#FFF" opacity="0.95" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Hero Content Grid */}
-        <div className="relative z-30 max-w-[1400px] mx-auto w-full grid md:grid-cols-12 gap-12 items-center flex-grow">
-          
-          {/* Logo Animation Section (Left Side) */}
-          <div className="md:col-span-6 flex flex-col items-start justify-center w-full max-w-[550px] mx-auto md:mx-0 animate-fade-in-up">
-            
-            {/* The SVG Logo Animation Container */}
-            <div className="w-full relative select-none animate-logo-glow">
-              <svg viewBox="0 0 550 220" className="w-full h-auto drop-shadow-[0_12px_28px_rgba(0,61,165,0.18)] overflow-visible">
-                <defs>
-                  {/* Subtle ambient drop shadows */}
-                  <filter id="logo-blue-glow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                  
-                  {/* Glowing filter for aircraft */}
-                  <filter id="glow-filter" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                    <feMerge>
-                      <feMergeNode in="coloredBlur"/>
-                      <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
-                  </filter>
-
-                  {/* Mask for revealing text PILOT left-to-right */}
-                  <mask id="letters-mask">
-                    <rect x="0" y="0" width="550" height="220" fill="black" />
-                    {/* Width of white rect increases to reveal content */}
-                    <rect x="0" y="0" height="220" fill="white" className="animate-letters-reveal" />
-                  </mask>
-                  
-                  {/* Glow color gradient for flight path trail */}
-                  <linearGradient id="trail-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.1" />
-                    <stop offset="50%" stopColor="#38BDF8" stopOpacity="0.6" />
-                    <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.95" />
-                  </linearGradient>
-                </defs>
-
-                {/* Ambient Blue Background Accent Circle */}
-                <circle cx="275" cy="110" r="140" fill="rgba(56, 189, 248, 0.04)" filter="url(#logo-blue-glow)" />
-
-                {/* 1. Curved outer frame base track (aviation flight path) */}
-                <path
-                  id="frame-track"
-                  d="M 92.5,75 C 60,75 40,75 40,97.5 L 40,145 Q 275,160 510,145 L 510,50 Q 275,35 92.5,50 L 92.5,75"
-                  fill="none"
-                  stroke="rgba(0, 61, 165, 0.22)"
-                  strokeWidth="2"
-                  strokeDasharray="4 6"
-                />
-
-                {/* 2. Synced white light trail path */}
-                <path
-                  d="M 92.5,75 C 60,75 40,75 40,97.5 L 40,145 Q 275,160 510,145 L 510,50 Q 275,35 92.5,50 L 92.5,75"
-                  fill="none"
-                  stroke="url(#trail-grad)"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  className="animate-logo-trail"
-                />
-
-                {/* 3. Curved outer frame drawing itself */}
-                <path
-                  d="M 40,97.5 L 40,145 Q 275,160 510,145 L 510,50 Q 275,35 92.5,50"
-                  fill="none"
-                  stroke="#003DA5"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  className="animate-logo-path"
-                />
-
-                {/* 4. PILOT Text group (revealed via mask) */}
-                <g mask="url(#letters-mask)" fill="#003DA5">
-                  {/* P (Stem, Bowl, and placeholder background chevron) */}
-                  <path d="M 80,65 H 105 V 72 L 92.5,78 L 80,84 Z" opacity="0.22" />
-                  <path d="M 80,96 L 105,84 V 130 H 80 Z" />
-                  <path d="M 105,65 H 150 C 168,65 174,72 174,81.25 C 174,90.5 168,97.5 150,97.5 H 105 Z M 105,75 H 138 C 145,75 149,78 149,81.25 C 149,84.5 145,87.5 138,87.5 H 105 Z" fillRule="evenodd" />
-                  
-                  {/* I */}
-                  <rect x="195" y="65" width="25" height="65" rx="2" />
-                  
-                  {/* L */}
-                  <path d="M 240,65 H 265 V 105 H 290 V 130 H 240 Z" />
-                  
-                  {/* O */}
-                  <path d="M 315,97.5 C 315,79 328,65 345,65 C 362,65 375,79 375,97.5 C 375,116 362,130 345,130 C 328,130 315,116 315,97.5 Z M 336.5,97.5 C 336.5,89 339,81.5 345,81.5 C 351,81.5 353.5,89 353.5,97.5 C 353.5,106 351,113.5 350,113.5 C 339,113.5 336.5,106 336.5,97.5 Z" fillRule="evenodd" />
-                  
-                  {/* T */}
-                  <rect x="400" y="65" width="60" height="25" rx="2" />
-                  <rect x="417.5" y="90" width="25" height="40" rx="2" />
-                </g>
-
-                {/* 5. Subtitle "Rotaract District Trainers Workshop" */}
-                <text
-                  x="275"
-                  y="190"
-                  fill="#003DA5"
-                  fontSize="12.5"
-                  fontFamily="'Outfit', sans-serif"
-                  fontWeight="600"
-                  letterSpacing="1.2"
-                  textAnchor="middle"
-                  className="animate-logo-subtitle drop-shadow-[0_2px_5px_rgba(0,0,0,0.15)]"
-                >
-                  Rotaract District Trainers Workshop
-                </text>
-
-                {/* 6. The small aircraft shape flying along its closed-loop path */}
-                <g className="animate-aircraft-glow">
-                  <path
-                    d="M -16,-12 L 8,-12 L 22,0 L 8,12 L -16,12 L -2,0 Z"
-                    fill="white"
-                    filter="url(#glow-filter)"
+              {/* CTA Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <Link to="/login">
+                  <Button
+                    size="sm"
+                    className="
+        rounded-full
+        shadow-floating
+        group
+        px-6 py-2.5
+        md:px-8 md:py-4
+        bg-[#003DA5]
+        hover:bg-[#002D80]
+        text-white
+        text-xs md:text-base
+        font-semibold
+        hover:scale-105
+        active:scale-95
+        transition-all
+        duration-300
+        flex items-center
+      "
                   >
-                    <animateMotion
-                      dur="5s"
-                      repeatCount="indefinite"
-                      rotate="auto"
-                      path="M 92.5,75 C 60,75 40,75 40,97.5 L 40,145 Q 275,160 510,145 L 510,50 Q 275,35 92.5,50 L 92.5,75"
+                    Explore Platform
+                    <ArrowRight
+                      size={14}
+                      className="ml-1.5 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform"
                     />
-                  </path>
-                </g>
-              </svg>
+                  </Button>
+                </Link>
+              </div>
             </div>
 
           </div>
 
-          <div className="md:col-span-6"></div>
+          {/* Right Column Area: Sleek Commercial Jet graphic centered in container */}
+          <div className="md:col-span-5 relative w-full h-[320px] md:h-[420px] flex items-center justify-center animate-fade-in-up order-2 md:order-none">
+            <div className="w-full max-w-[480px] pointer-events-none z-20 relative">
+              <div
+                className="w-full h-full parallax-layer preserve-3d relative flex justify-center"
+                style={{
+                  transform: 'perspective(1200px) rotateX(var(--mouse-rotate-x, 0deg)) rotateY(var(--mouse-rotate-y, 0deg))'
+                }}
+              >
+                {/* Clean soft backdrop glow */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-[#003DA5]/5 to-[#38BDF8]/10 blur-[80px] rounded-full scale-75 -z-10"></div>
+
+                {/* Jet Image */}
+                <img
+                  src={airplane}
+                  alt="Commercial Jet"
+                  className="w-[90%] h-auto object-contain filter drop-shadow-[0_20px_35px_rgba(0,61,165,0.12)] relative z-10 animate-jet-glide"
+                />
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Premium Bottom Features Bar */}
+        <div className="relative z-30 w-full max-w-[1100px] mx-auto mt-auto px-6 mb-4 animate-fade-in-up">
+          <div className="w-full h-[1px] bg-slate-200/50 mb-6"></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-5 rounded-2xl bg-white/80 border border-slate-200/60 shadow-lg backdrop-blur-md">
+
+            {/* Feature 1 */}
+            <div className="flex items-center gap-3 px-4 border-r border-slate-100 last:border-0 md:justify-center">
+              <Users className="text-[#003DA5] flex-shrink-0 w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
+              <div className="text-left font-sans">
+                <span className="text-xs md:text-sm lg:text-base font-bold text-slate-800 block">Empowering</span>
+                <span className="text-[10px] md:text-xs lg:text-sm text-slate-500 block">Trainers</span>
+              </div>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="flex items-center gap-3 px-4 border-r border-slate-100 last:border-0 md:justify-center">
+              <TrendingUp className="text-[#003DA5] flex-shrink-0 w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
+              <div className="text-left font-sans">
+                <span className="text-xs md:text-sm lg:text-base font-bold text-slate-800 block">Tracking</span>
+                <span className="text-[10px] md:text-xs lg:text-sm text-slate-500 block">Progress</span>
+              </div>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="flex items-center gap-3 px-4 border-r border-slate-100 last:border-0 md:justify-center">
+              <Award className="text-[#003DA5] flex-shrink-0 w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
+              <div className="text-left font-sans">
+                <span className="text-xs md:text-sm lg:text-base font-bold text-slate-800 block">Recognizing</span>
+                <span className="text-[10px] md:text-xs lg:text-sm text-slate-500 block">Excellence</span>
+              </div>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="flex items-center gap-3 px-4 last:border-0 md:justify-center">
+              <ShieldCheck className="text-[#003DA5] flex-shrink-0 w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
+              <div className="text-left font-sans">
+                <span className="text-xs md:text-sm lg:text-base font-bold text-slate-800 block">Building</span>
+                <span className="text-[10px] md:text-xs lg:text-sm text-slate-500 block">Leadership</span>
+              </div>
+            </div>
+
+          </div>
         </div>
 
       </section>
 
-      {/* Center Large Premium Heading */}
-      <div className="relative z-30 w-full max-w-4xl mx-auto text-center px-6 mb-16 animate-fade-in-up">
-        
-        {/* Glow Badge */}
-        <div className="inline-flex items-center gap-2 px-4.5 py-1.5 rounded-full bg-brand/10 border border-brand/20 shadow-soft backdrop-blur-sm mb-6 transition-all hover:border-brand/40">
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
-          </span>
-          <span className="text-xs font-semibold uppercase tracking-widest text-brand font-mono">
-            PILOT Platform v2.0
-          </span>
-        </div>
-
-        {/* Heading */}
-        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold font-outfit text-slate-900 leading-tight tracking-tight mb-6">
-          Identify Talent.<br className="sm:hidden" /> Train Excellence.<br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand via-blue-600 to-[#3B82F6] font-extrabold relative">
-            Elevate Leaders.
-            <span className="absolute bottom-1.5 left-0 w-full h-[6px] bg-brand-light/35 -z-10 rounded-full"></span>
-          </span>
-        </h1>
-
-        {/* Description */}
-        <p className="text-lg md:text-xl text-slate-700 leading-relaxed font-sans max-w-2xl mx-auto mb-8">
-          A centralized trainer development operating system designed for Rotaract District 3220 to evaluate, track, mentor, and promote future district trainers with ultimate clarity.
-        </p>
-
-        {/* Entry Call to Action */}
-        <div className="flex justify-center items-center gap-4">
-          <Link to="/login">
-            <Button size="lg" className="rounded-full shadow-floating group px-8 py-3 bg-brand text-white hover:bg-[#003080] hover:shadow-[0_12px_30px_rgba(0,61,165,0.25)] hover:scale-105 active:scale-95 transition-all duration-300 font-semibold text-sm">
-              {isAuthenticated ? 'Enter Workspace' : 'Access Control Room'}
-              <ArrowRight size={18} className="ml-2 inline-block group-hover:translate-x-1.5 transition-transform" />
-            </Button>
-          </Link>
-        </div>
-
+      {/* Team Members Header */}
+      <div className="w-full max-w-[1400px] mx-auto px-6 mt-12 mb-4 text-left relative z-30 animate-fade-in-up">
+        <h2 className="text-xl font-bold font-outfit text-[#0C122C] tracking-tight">Our District Team Members</h2>
+        <p className="text-xs text-slate-500 mt-1">Discover the leaders driving success and excellence in Rotaract District 3220.</p>
       </div>
 
       {/* Members Infinite Marquee scrolling from right to left */}
       <div className="w-full overflow-hidden py-6 border-y border-slate-200/50 bg-white/20 backdrop-blur-sm relative z-30 mb-6">
         <div className="relative w-full overflow-hidden flex">
           <div className="flex w-max gap-8 animate-marquee-scroll hover:[animation-play-state:paused] cursor-pointer">
-            
+
             {/* Set 1 */}
             <div className="flex shrink-0 gap-8 items-center">
               {members.map((member, i) => (
@@ -783,11 +542,17 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* Sponsors Header */}
+      <div className="w-full max-w-[1400px] mx-auto px-6 mt-8 mb-4 text-left relative z-30 animate-fade-in-up">
+        <h2 className="text-xl font-bold font-outfit text-[#0C122C] tracking-tight">Supported by Our Partners</h2>
+        <p className="text-xs text-slate-500 mt-1">We are proud to collaborate with industry-leading organizations and sponsors.</p>
+      </div>
+
       {/* Sponsors Infinite Marquee scrolling from left to right */}
       <div className="w-full overflow-hidden py-6 border-b border-slate-200/50 bg-white/10 backdrop-blur-sm relative z-30 mb-8">
         <div className="relative w-full overflow-hidden flex">
           <div className="flex w-max gap-12 animate-marquee-scroll-reverse hover:[animation-play-state:paused] cursor-pointer">
-            
+
             {/* Set 1 */}
             <div className="flex shrink-0 gap-12 items-center">
               {sponsors.map((sponsor, i) => (

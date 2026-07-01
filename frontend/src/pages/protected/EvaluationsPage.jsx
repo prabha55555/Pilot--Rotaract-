@@ -80,7 +80,7 @@ export default function EvaluationsPage() {
         let query = supabase
           .from('activities')
           .select('*, user:users!inner(id, name, club, pilot_id, role)')
-          .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
+          .in('status', ['Submitted', 'Pending Review', 'Resubmitted', 'Event Conducted', 'Event Cancelled', 'Planned'])
 
         if (userRole === 'DT') {
           query = query.eq('user.role', 'DTD')
@@ -192,19 +192,26 @@ export default function EvaluationsPage() {
       return
     }
 
+    const act = pendingActivities.find(a => a.id === selectedActivityId)
+    if (!act) {
+      showToast('Activity not found', 'error')
+      return
+    }
+
+    // Determine final status based on action and type of event (conducted vs cancelled)
+    let finalStatus = 'Submitted'
+    if (act.status === 'Event Cancelled') {
+      finalStatus = actionType === 'Approved' 
+        ? 'Cancellation Approved' 
+        : (actionType === 'Rejected' ? 'Cancellation Rejected' : 'Resubmitted')
+    } else {
+      finalStatus = actionType === 'Approved' 
+        ? 'Approved' 
+        : (actionType === 'Rejected' ? 'Rejected' : 'Resubmitted')
+    }
+
     setSubmitting(true)
     try {
-      const evaluationData = {
-        candidateId: selectedCandidateId,
-        evaluatorId: user.id,
-        remarks,
-        activity_id: selectedActivityId,
-        status: actionType, // Add status explicitly if our API allowed it, otherwise insert directly via Supabase below
-        strengths: '',
-        improvements: '',
-        recommendation: actionType === 'Approved'
-      }
-
       // 1. Insert into evaluations table
       const { error: evalError } = await supabase
         .from('evaluations')
@@ -213,21 +220,21 @@ export default function EvaluationsPage() {
           evaluator_id: user.id,
           activity_id: selectedActivityId,
           remarks: remarks,
-          status: actionType,
+          status: finalStatus,
           recommendation: actionType === 'Approved'
         }])
       if (evalError) throw evalError
 
       // 2. Update activity status
-      await api.updateActivityStatus(selectedActivityId, actionType)
+      await api.updateActivityStatus(selectedActivityId, finalStatus)
 
-      showToast(`Activity ${actionType} successfully!`)
+      showToast(`Decision "${actionType}" submitted successfully!`)
       
       setIsSubmitModalOpen(false)
       loadData()
     } catch (err) {
       console.error(err)
-      showToast(err.message || 'Failed to submit approval', 'error')
+      showToast(err.message || 'Failed to submit decision', 'error')
     } finally {
       setSubmitting(false)
     }
@@ -255,8 +262,16 @@ export default function EvaluationsPage() {
       header: 'Status', 
       accessor: 'status', 
       render: (row) => (
-        <Badge variant={row.status === 'Approved' ? 'success' : row.status === 'Rejected' ? 'error' : 'warning'}>
-          {row.status || (row.recommendation ? 'Promote' : 'Needs Work')}
+        <Badge variant={
+          row.status === 'Event Conducted' ? 'success' :
+          row.status === 'Event Cancelled' ? 'error' :
+          row.status === 'Rejected' ? 'error' :
+          ['Submitted for Approval', 'Under Review', 'Resubmitted'].includes(row.status) ? 'warning' :
+          row.status === 'Planned' ? 'brand' :
+          row.status === 'Draft' ? 'draft' :
+          'default'
+        }>
+          {row.status || (row.recommendation ? 'Approved' : 'Needs Work')}
         </Badge>
       )
     },
@@ -315,6 +330,21 @@ export default function EvaluationsPage() {
       render: (row) => <span className="text-xs text-text-light font-medium">{row.avenue || row.category || '-'}</span>
     },
     { 
+      header: 'Status', 
+      accessor: 'status',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={
+          row.status === 'Event Conducted' ? 'warning' :
+          row.status === 'Event Cancelled' ? 'warning' :
+          row.status === 'Planned' ? 'brand' :
+          'default'
+        }>
+          {row.status === 'Planned' ? 'Planned (Upcoming)' : row.status}
+        </Badge>
+      )
+    },
+    { 
       header: 'Date Submitted', 
       accessor: 'created_at',
       sortable: true,
@@ -332,13 +362,15 @@ export default function EvaluationsPage() {
           >
             <Eye size={14} className="stroke-[2.5]" />
           </button>
-          <button
-            onClick={() => handleOpenSubmitModal(row)}
-            title="Submit Evaluation & Approve/Reject"
-            className="p-2 bg-brand-light text-brand hover:bg-brand hover:text-white rounded-lg transition-all"
-          >
-            <FileCheck size={14} className="stroke-[2.5]" />
-          </button>
+          {row.status !== 'Planned' && (
+            <button
+              onClick={() => handleOpenSubmitModal(row)}
+              title="Submit Evaluation & Approve/Reject"
+              className="p-2 bg-brand-light text-brand hover:bg-brand hover:text-white rounded-lg transition-all"
+            >
+              <FileCheck size={14} className="stroke-[2.5]" />
+            </button>
+          )}
         </div>
       )
     }
@@ -366,7 +398,15 @@ export default function EvaluationsPage() {
       header: 'Status', 
       accessor: 'status', 
       render: (row) => (
-        <Badge variant={row.status === 'Approved' ? 'success' : row.status === 'Rejected' ? 'error' : 'warning'}>
+        <Badge variant={
+          row.status === 'Event Conducted' ? 'success' :
+          row.status === 'Event Cancelled' ? 'error' :
+          row.status === 'Rejected' ? 'error' :
+          ['Submitted for Approval', 'Under Review', 'Resubmitted'].includes(row.status) ? 'warning' :
+          row.status === 'Planned' ? 'brand' :
+          row.status === 'Draft' ? 'draft' :
+          'default'
+        }>
           {row.status || 'Reviewed'}
         </Badge>
       )
@@ -505,7 +545,7 @@ export default function EvaluationsPage() {
               required
             >
               <option value="">Choose activity...</option>
-              {pendingActivities.map(act => (
+              {pendingActivities.filter(act => act.status !== 'Planned').map(act => (
                 <option key={act.id} value={act.id}>
                   {act.title} ({act.user?.name})
                 </option>
@@ -554,6 +594,16 @@ export default function EvaluationsPage() {
                   className="h-4 w-4 text-brand focus:ring-brand"
                 />
                 Reject
+              </label>
+              <label className="flex items-center gap-2 text-sm font-semibold text-text-main cursor-pointer">
+                <input 
+                  type="radio" 
+                  value="Resubmitted" 
+                  checked={actionType === 'Resubmitted'} 
+                  onChange={(e) => setActionType(e.target.value)} 
+                  className="h-4 w-4 text-brand focus:ring-brand"
+                />
+                Request Resubmission
               </label>
             </div>
           </div>

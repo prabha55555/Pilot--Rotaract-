@@ -3,8 +3,8 @@ import { useAuth } from '../../context/AuthContext'
 import { api } from '../../services/api'
 import { supabase } from '../../services/supabase'
 import { uploadToCloudinary } from '../../services/cloudinary'
-import { 
-  Plus, Edit2, Trash2, Check, FileCheck, ArrowUpRight, 
+import {
+  Plus, Edit2, Trash2, Check, FileCheck, ArrowUpRight,
   Search, Filter, X, Eye, FileText, Upload, MapPin, Phone, User as UserIcon, ClipboardList
 } from 'lucide-react'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -23,7 +23,7 @@ export default function ActivitiesPage() {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
-  
+
   // Details Modal State
   const [selectedActivity, setSelectedActivity] = useState(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
@@ -31,7 +31,7 @@ export default function ActivitiesPage() {
   // Form Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingActivity, setEditingActivity] = useState(null)
-  
+
   // Form Fields
   const [title, setTitle] = useState('')
   const [avenue, setAvenue] = useState('')
@@ -43,11 +43,23 @@ export default function ActivitiesPage() {
   const [endDate, setEndDate] = useState('')
   const [projectChair, setProjectChair] = useState('')
   const [projectChairContact, setProjectChairContact] = useState('')
-  
+  const [mom, setMom] = useState('')
+  const [hoursConducted, setHoursConducted] = useState('')
+
+  // Two-Stage workflow state fields
+  const [expectedDuration, setExpectedDuration] = useState('')
+  const [objectives, setObjectives] = useState('')
+  const [expectedParticipants, setExpectedParticipants] = useState('')
+  const [numParticipants, setNumParticipants] = useState('')
+  const [eventStatus, setEventStatus] = useState('Conducted') // 'Conducted' | 'Cancelled'
+  const [cancellationReason, setCancellationReason] = useState('')
+  const [additionalRemarks, setAdditionalRemarks] = useState('')
+  const [isCompletionMode, setIsCompletionMode] = useState(false)
+
   // File Upload State
   const [photos, setPhotos] = useState([])
   const [pdfReport, setPdfReport] = useState(null)
-  
+
   // Edit existing files tracking
   const [existingPhotos, setExistingPhotos] = useState([])
   const [existingPdf, setExistingPdf] = useState(null)
@@ -60,7 +72,7 @@ export default function ActivitiesPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
 
-  const avenues = ['Club Service', 'Community Service', 'Professional Development', 'International Service']
+  const avenues = ['Club Service', 'Community Service', 'Orientation', 'Professional Development', 'International Service']
   const projectTypes = ['Self', 'Rotary', 'Interact', 'Other Rotaract Clubs', 'Sister Clubs', 'NGOs', 'Other clubs (Exclusive for Campus Based)']
   const projectModes = ['Offline', 'Online']
 
@@ -86,9 +98,9 @@ export default function ActivitiesPage() {
       .channel(`activities-user-${user?.id}`)
       .on(
         'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
+        {
+          event: '*',
+          schema: 'public',
           table: 'activities',
           filter: `user_id=eq.${user?.id}`
         },
@@ -118,6 +130,16 @@ export default function ActivitiesPage() {
     setEndDate('')
     setProjectChair('')
     setProjectChairContact('')
+    setMom('')
+    setHoursConducted('')
+    setExpectedDuration('')
+    setObjectives('')
+    setExpectedParticipants('')
+    setNumParticipants('')
+    setEventStatus('Conducted')
+    setCancellationReason('')
+    setAdditionalRemarks('')
+    setIsCompletionMode(false)
     setPhotos([])
     setPdfReport(null)
     setExistingPhotos([])
@@ -145,7 +167,22 @@ export default function ActivitiesPage() {
     setEndDate(activity.end_date ? new Date(activity.end_date).toISOString().slice(0, 16) : '')
     setProjectChair(activity.project_chair || '')
     setProjectChairContact(activity.project_chair_contact || '')
-    
+    setMom(activity.mom || '')
+    setHoursConducted(activity.hours_conducted !== undefined && activity.hours_conducted !== null ? String(activity.hours_conducted) : '')
+
+    // Workflow values initialization
+    setExpectedDuration(activity.expected_duration !== undefined && activity.expected_duration !== null ? String(activity.expected_duration) : '')
+    setObjectives(activity.objectives || '')
+    setExpectedParticipants(activity.expected_participants !== undefined && activity.expected_participants !== null ? String(activity.expected_participants) : '')
+    setNumParticipants(activity.num_participants !== undefined && activity.num_participants !== null ? String(activity.num_participants) : '')
+    setEventStatus(activity.event_status || 'Conducted')
+    setCancellationReason(activity.cancellation_reason || '')
+    setAdditionalRemarks(activity.additional_remarks || '')
+
+    // Switch to completion mode if the event has been proposed & approved
+    const isPostProposal = ['Planned', 'Under Review', 'Event Conducted', 'Event Cancelled'].includes(activity.status)
+    setIsCompletionMode(isPostProposal)
+
     // Fetch associated files
     try {
       const filesData = await api.getActivityFiles(activity.id)
@@ -170,7 +207,7 @@ export default function ActivitiesPage() {
       if (filesData) {
         for (const fileItem of filesData) {
           // The backend handles extracting storage path and deleting from storage
-          await api.deleteStorageFile(id, fileItem.file_url).catch(() => {})
+          await api.deleteStorageFile(id, fileItem.file_url).catch(() => { })
         }
       }
 
@@ -185,12 +222,12 @@ export default function ActivitiesPage() {
 
   const handleSubmitReview = async (activityId) => {
     try {
-      await api.updateActivityStatus(activityId, 'Submitted')
-      showToast('Activity submitted for review!')
+      await api.updateActivityStatus(activityId, 'Planned')
+      showToast('Event planned successfully!')
       fetchActivities()
     } catch (err) {
       console.error(err)
-      showToast('Failed to submit activity', 'error')
+      showToast('Failed to plan event', 'error')
     }
   }
 
@@ -198,7 +235,7 @@ export default function ActivitiesPage() {
   const handlePhotoSelect = (e) => {
     const selected = Array.from(e.target.files)
     const validPhotos = []
-    
+
     selected.forEach(f => {
       const ext = f.name.split('.').pop().toLowerCase()
       if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
@@ -260,8 +297,34 @@ export default function ActivitiesPage() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault()
-    if (!title || !avenue || !projectType || !projectMode || !location || !description || !startDate || !endDate || !projectChair) {
-      showToast('Please fill in all required fields', 'error')
+
+    if (!isCompletionMode) {
+      // Proposal Validation
+      if (!title || !avenue || !projectType || !projectMode || !location || !description || !startDate || !endDate || !projectChair || !expectedDuration || !objectives || !expectedParticipants) {
+        showToast('Please fill in all required proposal fields', 'error')
+        return
+      }
+    } else {
+      // Completion/Cancellation Validation
+      if (eventStatus === 'Conducted') {
+        if (!mom || !hoursConducted || !numParticipants) {
+          showToast('Please fill in MOM, hours conducted, and actual participants', 'error')
+          return
+        }
+        if (photos.length === 0 && existingPhotos.length === 0) {
+          showToast('Please upload at least one project photo.', 'error')
+          return
+        }
+      } else {
+        if (!cancellationReason) {
+          showToast('Please select a cancellation reason', 'error')
+          return
+        }
+      }
+    }
+
+    if (projectChairContact && !/^\d+$/.test(projectChairContact)) {
+      showToast('Project Chair Contact must contain numbers only', 'error')
       return
     }
 
@@ -270,21 +333,16 @@ export default function ActivitiesPage() {
       return
     }
 
-    if (photos.length === 0 && existingPhotos.length === 0) {
-      showToast('Please upload at least one project photo.', 'error')
-      return
-    }
-
     setSubmitting(true)
     try {
       // 1. Delete files marked for deletion (via backend)
       for (const p of photosToDelete) {
-        await api.deleteStorageFile(editingActivity.id, p.file_url).catch(() => {})
+        await api.deleteStorageFile(editingActivity.id, p.file_url).catch(() => { })
         await api.deleteActivityFile(p.id)
       }
 
       if (pdfToDelete) {
-        await api.deleteStorageFile(editingActivity.id, pdfToDelete.file_url).catch(() => {})
+        await api.deleteStorageFile(editingActivity.id, pdfToDelete.file_url).catch(() => { })
         await api.deleteActivityFile(pdfToDelete.id)
       }
 
@@ -302,36 +360,55 @@ export default function ActivitiesPage() {
         project_chair: projectChair,
         project_chair_contact: projectChairContact,
         userId: user.id,
-        status: editingActivity?.status === 'Rejected' ? 'Submitted' : (editingActivity?.status || 'Submitted')
+
+        // Proposal Stage Fields
+        expected_duration: expectedDuration ? parseFloat(expectedDuration) : null,
+        objectives,
+        expected_participants: expectedParticipants ? parseInt(expectedParticipants) : null,
+
+        // Completion Stage Fields
+        mom: isCompletionMode && eventStatus === 'Conducted' ? mom : null,
+        hours_conducted: isCompletionMode && eventStatus === 'Conducted' && hoursConducted ? parseFloat(hoursConducted) : null,
+        num_participants: isCompletionMode && eventStatus === 'Conducted' && numParticipants ? parseInt(numParticipants) : null,
+        event_status: isCompletionMode ? eventStatus : 'Conducted',
+        cancellation_reason: isCompletionMode && eventStatus === 'Cancelled' ? cancellationReason : null,
+        additional_remarks: additionalRemarks,
+
+        // Dynamic status workflow setting
+        status: isCompletionMode
+          ? (eventStatus === 'Cancelled' ? 'Event Cancelled' : 'Event Conducted')
+          : (editingActivity?.status === 'Rejected' ? 'Planned' : (editingActivity?.status || 'Planned'))
       }
 
       let resultActivity
       if (editingActivity) {
         resultActivity = await api.updateActivity(editingActivity.id, activityData)
-        showToast('Project updated and resubmitted successfully!')
+        showToast(isCompletionMode ? 'Project completion details submitted for verification!' : 'Project proposal updated successfully!')
       } else {
         resultActivity = await api.createActivity(activityData)
-        showToast('Project created and submitted for review!')
+        showToast('Project planned and submitted successfully!')
       }
 
-      // 3. Upload new photos to Cloudinary and register in database
-      for (const p of photos) {
-        const cloudFile = await uploadToCloudinary(p)
-        await api.createActivityFile(resultActivity.id, {
-          file_name: cloudFile.original_name,
-          file_url: cloudFile.url,
-          file_type: cloudFile.format
-        })
-      }
+      // 3. Upload new photos (Stage 2 Conducted only)
+      if (isCompletionMode && eventStatus === 'Conducted') {
+        for (const p of photos) {
+          const cloudFile = await uploadToCloudinary(p)
+          await api.createActivityFile(resultActivity.id, {
+            file_name: cloudFile.original_name,
+            file_url: cloudFile.url,
+            file_type: cloudFile.format
+          })
+        }
 
-      // 4. Upload new PDF report to Cloudinary and register in database
-      if (pdfReport) {
-        const cloudPdf = await uploadToCloudinary(pdfReport)
-        await api.createActivityFile(resultActivity.id, {
-          file_name: cloudPdf.original_name,
-          file_url: cloudPdf.url,
-          file_type: 'pdf'
-        })
+        // 4. Upload new PDF report
+        if (pdfReport) {
+          const cloudPdf = await uploadToCloudinary(pdfReport)
+          await api.createActivityFile(resultActivity.id, {
+            file_name: cloudPdf.original_name,
+            file_url: cloudPdf.url,
+            file_type: 'pdf'
+          })
+        }
       }
 
       setIsModalOpen(false)
@@ -354,9 +431,9 @@ export default function ActivitiesPage() {
 
   // Columns definition for DataTable
   const columns = [
-    { 
-      header: 'Title', 
-      accessor: 'title', 
+    {
+      header: 'Title',
+      accessor: 'title',
       sortable: true,
       render: (row) => (
         <div>
@@ -365,30 +442,34 @@ export default function ActivitiesPage() {
         </div>
       )
     },
-    { 
-      header: 'Avenue', 
-      accessor: 'avenue', 
+    {
+      header: 'Avenue',
+      accessor: 'avenue',
       sortable: true,
       render: (row) => <Badge variant="blue">{row.avenue || row.category || '-'}</Badge>
     },
-    { 
-      header: 'Date Created', 
-      accessor: 'created_at', 
+    {
+      header: 'Date Created',
+      accessor: 'created_at',
       sortable: true,
       render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
     },
-    { 
-      header: 'Status', 
-      accessor: 'status', 
+    {
+      header: 'Status',
+      accessor: 'status',
       sortable: true,
       render: (row) => (
         <Badge variant={
           row.status === 'Approved' ? 'success' :
-          row.status === 'Rejected' ? 'error' :
-          row.status === 'Submitted' ? 'warning' :
-          row.status === 'Pending Review' ? 'warning' :
-          row.status === 'Resubmitted' ? 'warning' :
-          'default'
+            row.status === 'Event Conducted' ? 'warning' :
+              row.status === 'Event Cancelled' ? 'warning' :
+                row.status === 'Rejected' ? 'error' :
+                  row.status === 'Cancellation Approved' ? 'error' :
+                    row.status === 'Cancellation Rejected' ? 'error' :
+                      ['Submitted for Approval', 'Under Review', 'Resubmitted'].includes(row.status) ? 'warning' :
+                        row.status === 'Planned' ? 'brand' :
+                          row.status === 'Draft' ? 'draft' :
+                            'default'
         }>
           {row.status}
         </Badge>
@@ -398,13 +479,13 @@ export default function ActivitiesPage() {
       header: 'Actions',
       accessor: 'actions',
       render: (row) => {
-        const isPending = ['Submitted', 'Pending Review', 'Resubmitted'].includes(row.status)
         const isDraft = row.status === 'Draft'
         const isRejected = row.status === 'Rejected'
-        const isApproved = row.status === 'Approved'
+        const isPlanned = row.status === 'Planned'
 
-        const canEdit = isDraft || isPending || isRejected
-        const canDelete = isDraft || isPending
+        // Can edit if not yet approved or currently pending review
+        const canEdit = !['Approved', 'Cancellation Approved', 'Event Conducted', 'Event Cancelled'].includes(row.status)
+        const canDelete = ['Draft', 'Planned'].includes(row.status)
         const canSubmit = isDraft
 
         return (
@@ -420,7 +501,7 @@ export default function ActivitiesPage() {
             {canSubmit && (
               <button
                 onClick={() => handleSubmitReview(row.id)}
-                title="Submit for review"
+                title="Submit proposal for approval"
                 className="p-2 bg-green-50 text-success hover:bg-success hover:text-white rounded-lg transition-all"
               >
                 <Check size={14} className="stroke-[2.5]" />
@@ -430,10 +511,10 @@ export default function ActivitiesPage() {
             {canEdit && (
               <button
                 onClick={() => handleOpenEditModal(row)}
-                title={isRejected ? "Edit & Resubmit" : "Edit Submission"}
+                title={isPlanned ? "Submit Completion / Cancellation" : (isRejected ? "Edit & Resubmit" : "Edit Submission")}
                 className="p-2 bg-blue-50 text-brand hover:bg-brand hover:text-white rounded-lg transition-all"
               >
-                <Edit2 size={14} className="stroke-[2.5]" />
+                {isPlanned ? <FileCheck size={14} className="stroke-[2.5]" /> : <Edit2 size={14} className="stroke-[2.5]" />}
               </button>
             )}
 
@@ -459,8 +540,8 @@ export default function ActivitiesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Project Activity Documents" 
+      <PageHeader
+        title="Project Activity Documents"
         subtitle="Upload and manage your project activity reports, posters, and submissions."
         actionText="Upload Activity"
         onActionClick={handleOpenCreateModal}
@@ -489,9 +570,12 @@ export default function ActivitiesPage() {
           >
             <option value="">All Statuses</option>
             <option value="Draft">Draft</option>
-            <option value="Submitted">Submitted</option>
+            <option value="Planned">Planned</option>
+            <option value="Event Conducted">Event Conducted</option>
+            <option value="Event Cancelled">Event Cancelled</option>
             <option value="Approved">Approved</option>
             <option value="Rejected">Rejected</option>
+            <option value="Resubmitted">Resubmitted</option>
           </select>
           {(statusFilter || categoryFilter) && (
             <Button
@@ -530,295 +614,358 @@ export default function ActivitiesPage() {
         size="xl"
       >
         <form className="space-y-8" onSubmit={handleFormSubmit}>
-          
-          {/* ── Section 1: Basic Information ── */}
-          <div>
-            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider mb-4 flex items-center gap-2">
-              <ClipboardList size={16} className="text-brand" />
-              Basic Information
-            </h3>
-            <div className="space-y-4">
-              {/* Project Name */}
-              <div className="relative">
-                <label className={labelClass}>
-                  Project Name <span className="text-red-500">*</span>
-                </label>
+
+          {/* ── Conditional Form Fields based on Stage ── */}
+          {!isCompletionMode ? (
+            // Stage 1: Event Proposal Form
+            <div className="space-y-6">
+              {/* Proposal Info Header */}
+              <div className="p-4 bg-brand-light/35 border border-brand/20 rounded-xl">
+                <h4 className="text-xs font-bold text-brand uppercase tracking-wider mb-1">Stage 1: Event Proposal</h4>
+                <p className="text-xs text-text-light">Submit the planned details of your upcoming event to your superior for approval.</p>
+              </div>
+
+              {/* Title & Description */}
+              <div className="space-y-4">
                 <div className="relative">
+                  <label className={labelClass}>Project Title / Event Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className={inputClass + " pr-10"}
-                    placeholder="Project Name *"
+                    className={inputClass}
+                    placeholder="E.g. District Trainer's Seminar"
                     required
                   />
-                  <FileText size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 </div>
-              </div>
 
-              {/* Avenue / Project Type / Project Mode — 3 columns */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className={labelClass}>
-                    Avenue <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={avenue}
-                    onChange={(e) => setAvenue(e.target.value)}
-                    className={selectClass}
-                    required
-                  >
-                    <option value="">Avenue *</option>
-                    {avenues.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className={labelClass}>Avenue <span className="text-red-500">*</span></label>
+                    <select value={avenue} onChange={(e) => setAvenue(e.target.value)} className={selectClass} required>
+                      <option value="">Avenue *</option>
+                      {avenues.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Project Type <span className="text-red-500">*</span></label>
+                    <select value={projectType} onChange={(e) => setProjectType(e.target.value)} className={selectClass} required>
+                      <option value="">Project Type *</option>
+                      {projectTypes.map(pt => <option key={pt} value={pt}>{pt}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Project Mode <span className="text-red-500">*</span></label>
+                    <select value={projectMode} onChange={(e) => setProjectMode(e.target.value)} className={selectClass} required>
+                      <option value="">Project Mode *</option>
+                      {projectModes.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className={labelClass}>
-                    Project Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={projectType}
-                    onChange={(e) => setProjectType(e.target.value)}
-                    className={selectClass}
-                    required
-                  >
-                    <option value="">Project Type *</option>
-                    {projectTypes.map(pt => <option key={pt} value={pt}>{pt}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>
-                    Project Mode <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={projectMode}
-                    onChange={(e) => setProjectMode(e.target.value)}
-                    className={selectClass}
-                    required
-                  >
-                    <option value="">Project Mode *</option>
-                    {projectModes.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-              </div>
 
-              {/* Location */}
-              <div>
-                <label className={labelClass}>
-                  Location <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
+                <div>
+                  <label className={labelClass}>Venue / Location <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className={inputClass + " pr-10"}
-                    placeholder="Location *"
+                    className={inputClass}
+                    placeholder="Venue / Address *"
                     required
                   />
-                  <MapPin size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                </div>
-              </div>
-
-              {/* Project Description with Character Counter */}
-              <div>
-                <label className={labelClass}>
-                  Project Description <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <textarea
-                    value={description}
-                    onChange={(e) => {
-                      if (e.target.value.length <= 1000) setDescription(e.target.value)
-                    }}
-                    className={inputClass + " h-28 resize-none"}
-                    placeholder="Project Description *"
-                    required
-                  />
-                  <span className="absolute bottom-3 right-3 text-xs text-gray-400 font-semibold">
-                    {description.length}/1000
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Section 2: Schedule Information ── */}
-          <div>
-            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider mb-4">
-              Schedule Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  Start Date & Time <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className={inputClass}
-                  required
-                />
-              </div>
-              <div>
-                <label className={labelClass}>
-                  End Date & Time <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className={inputClass}
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* ── Section 3: Project Leadership ── */}
-          <div>
-            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider mb-4">
-              Project Leadership
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>
-                  Project Chair <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={projectChair}
-                    onChange={(e) => setProjectChair(e.target.value)}
-                    className={inputClass + " pr-10"}
-                    placeholder="Project Chair *"
-                    required
-                  />
-                  <UserIcon size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  Project Chair Contact
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={projectChairContact}
-                    onChange={(e) => setProjectChairContact(e.target.value)}
-                    className={inputClass + " pr-10"}
-                    placeholder="Project Chair Contact"
-                  />
-                  <Phone size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Section 4: Project Evidence ── */}
-          <div>
-            <h3 className="text-sm font-bold text-text-main uppercase tracking-wider mb-4">
-              Project Evidence & Documents
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* Photo Uploads Section */}
-              <div className="space-y-4">
-                <label className={labelClass}>
-                  Project Photos <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 relative hover:border-brand/40 hover:bg-brand/5 transition-all group cursor-pointer font-outfit">
-                  <input
-                    type="file"
-                    multiple
-                    onChange={handlePhotoSelect}
-                    accept=".jpg,.jpeg,.png,.webp"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <Upload size={20} className="text-text-muted" />
-                  <div className="text-center pointer-events-none">
-                    <p className="text-xs font-semibold text-text-main">
-                      <span className="text-brand">Upload photos</span> or drag & drop
-                    </p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">JPG, PNG, WEBP (Max 1MB per image)</p>
-                  </div>
                 </div>
 
-                {/* Previews & Existing Photos List */}
-                <div className="flex flex-wrap gap-2.5 mt-2">
-                  {/* Existing Photos */}
-                  {existingPhotos.map(p => (
-                    <div key={p.id} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 group">
-                      <img src={p.file_url} className="w-full h-full object-cover" alt="Preview" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveExistingPhoto(p)}
-                        className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  {/* New Selected Photos Previews */}
-                  {photos.map((p, idx) => (
-                    <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 group">
-                      <img src={URL.createObjectURL(p)} className="w-full h-full object-cover" alt="Preview" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveNewPhoto(idx)}
-                        className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* PDF Report Upload Section */}
-              <div className="space-y-4">
-                <label className={labelClass}>
-                  PDF Project Report (Optional)
-                </label>
-                {!existingPdf && !pdfReport ? (
-                  <div className="w-full p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 relative hover:border-brand/40 hover:bg-brand/5 transition-all group cursor-pointer font-outfit">
-                    <input
-                      type="file"
-                      onChange={handlePdfSelect}
-                      accept=".pdf"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                <div>
+                  <label className={labelClass}>Event Description <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <textarea
+                      value={description}
+                      onChange={(e) => { if (e.target.value.length <= 1000) setDescription(e.target.value); }}
+                      className={inputClass + " h-24 resize-none"}
+                      placeholder="Brief event description *"
+                      required
                     />
-                    <FileText size={20} className="text-text-muted" />
-                    <div className="text-center pointer-events-none">
-                      <p className="text-xs font-semibold text-text-main">
-                        <span className="text-brand">Upload PDF Report</span> or drag & drop
-                      </p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">PDF Format (Max 5MB)</p>
-                    </div>
+                    <span className="absolute bottom-2.5 right-3 text-[10px] text-gray-400 font-bold">{description.length}/1000</span>
                   </div>
-                ) : (
-                  <div className="p-4 bg-gray-100 border border-gray-200 rounded-xl flex items-center justify-between">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <FileText size={20} className="text-red-500 flex-shrink-0" />
-                      <span className="text-xs font-semibold text-text-main truncate max-w-[200px]">
-                        {pdfReport ? pdfReport.name : existingPdf.file_name}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemovePdf}
-                      className="p-1.5 hover:bg-gray-200 rounded-lg text-semantic-error transition-all"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Proposed Start Date & Time <span className="text-red-500">*</span></label>
+                    <input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass} required />
                   </div>
-                )}
+                  <div>
+                    <label className={labelClass}>Proposed End Date & Time <span className="text-red-500">*</span></label>
+                    <input type="datetime-local" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputClass} required />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className={labelClass}>Expected Duration (Hours) <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      value={expectedDuration}
+                      onChange={(e) => setExpectedDuration(e.target.value)}
+                      className={inputClass}
+                      placeholder="Hours (e.g. 2)"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Expected Participants <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={expectedParticipants}
+                      onChange={(e) => setExpectedParticipants(e.target.value)}
+                      className={inputClass}
+                      placeholder="Count (e.g. 50)"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Project Chair <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={projectChair}
+                      onChange={(e) => setProjectChair(e.target.value)}
+                      className={inputClass}
+                      placeholder="Project Chair Name"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Project Chair Contact</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={projectChairContact}
+                      onChange={(e) => setProjectChairContact(e.target.value.replace(/\D/g, ''))}
+                      className={inputClass}
+                      placeholder="Contact number"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Objectives of the Event <span className="text-red-500">*</span></label>
+                    <textarea
+                      value={objectives}
+                      onChange={(e) => setObjectives(e.target.value)}
+                      className={inputClass + " h-12"}
+                      placeholder="E.g. Introduce mentoring skills..."
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Additional Remarks</label>
+                  <textarea
+                    value={additionalRemarks}
+                    onChange={(e) => setAdditionalRemarks(e.target.value)}
+                    className={inputClass + " h-12"}
+                    placeholder="Remarks or special requirements..."
+                  />
+                </div>
+
+              </div>
+            </div>
+          ) : (
+            // Stage 2: Event Completion / Cancellation Form
+            <div className="space-y-6">
+
+              {/* Proposal Summary Card */}
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-left space-y-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Proposal Reference Summary</span>
+                <h4 className="text-sm font-bold text-text-main leading-none">{title}</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs font-semibold text-text-muted">
+                  <div>Avenue: <span className="text-brand">{avenue || '-'}</span></div>
+                  <div>Venue: <span className="text-text-main">{location || '-'}</span></div>
+                  <div>Expected Duration: <span className="text-text-main">{expectedDuration ? `${expectedDuration} hr` : '-'}</span></div>
+                </div>
               </div>
 
+              {/* Event Cancellation Toggle */}
+              <div className="p-4 bg-gray-100/50 border border-gray-200 rounded-xl space-y-3">
+                <label className={labelClass}>Event Execution Status <span className="text-red-500">*</span></label>
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 text-sm font-bold text-text-main cursor-pointer">
+                    <input
+                      type="radio"
+                      name="eventStatus"
+                      value="Conducted"
+                      checked={eventStatus === 'Conducted'}
+                      onChange={() => setEventStatus('Conducted')}
+                      className="h-4 w-4 text-brand focus:ring-brand"
+                    />
+                    Event Conducted
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-bold text-text-main cursor-pointer">
+                    <input
+                      type="radio"
+                      name="eventStatus"
+                      value="Cancelled"
+                      checked={eventStatus === 'Cancelled'}
+                      onChange={() => setEventStatus('Cancelled')}
+                      className="h-4 w-4 text-brand focus:ring-brand"
+                    />
+                    Event Cancelled
+                  </label>
+                </div>
+              </div>
+
+              {eventStatus === 'Conducted' ? (
+                // Conducted Inputs
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Actual Hours Conducted <span className="text-red-500">*</span></label>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={hoursConducted}
+                        onChange={(e) => setHoursConducted(e.target.value)}
+                        className={inputClass}
+                        placeholder="Hours (e.g. 2.5)"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Actual Number of Participants <span className="text-red-500">*</span></label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={numParticipants}
+                        onChange={(e) => setNumParticipants(e.target.value)}
+                        className={inputClass}
+                        placeholder="Participants count"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>MOM (Minutes of Meeting / Event Summary) <span className="text-red-500">*</span></label>
+                    <textarea
+                      value={mom}
+                      onChange={(e) => setMom(e.target.value)}
+                      className={inputClass + " h-24 resize-none"}
+                      placeholder="Record summaries, discussions, feedback, and key points of the event..."
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Photos upload */}
+                    <div>
+                      <label className={labelClass}>Project Photos <span className="text-red-500">*</span></label>
+                      <div className="w-full p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 relative hover:border-brand/40 hover:bg-brand/5 transition-all cursor-pointer font-outfit">
+                        <input type="file" multiple onChange={handlePhotoSelect} accept=".jpg,.jpeg,.png,.webp" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                        <Upload size={18} className="text-text-muted" />
+                        <div className="text-center pointer-events-none">
+                          <p className="text-[11px] font-bold text-text-main"><span className="text-brand">Upload photos</span></p>
+                          <p className="text-[9px] text-gray-500">Max 1MB per image</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2.5 mt-2">
+                        {existingPhotos.map(p => (
+                          <div key={p.id} className="relative w-14 h-14 rounded-lg overflow-hidden border border-gray-200 group">
+                            <img src={p.file_url} className="w-full h-full object-cover" alt="Preview" />
+                            <button type="button" onClick={() => handleRemoveExistingPhoto(p)} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ))}
+                        {photos.map((p, idx) => (
+                          <div key={idx} className="relative w-14 h-14 rounded-lg overflow-hidden border border-gray-200 group">
+                            <img src={URL.createObjectURL(p)} className="w-full h-full object-cover" alt="Preview" />
+                            <button type="button" onClick={() => handleRemoveNewPhoto(idx)} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* PDF upload */}
+                    <div>
+                      <label className={labelClass}>PDF Project Report (Optional)</label>
+                      {!existingPdf && !pdfReport ? (
+                        <div className="w-full p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 relative hover:border-brand/40 hover:bg-brand/5 transition-all cursor-pointer font-outfit">
+                          <input type="file" onChange={handlePdfSelect} accept=".pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                          <FileText size={18} className="text-text-muted" />
+                          <div className="text-center pointer-events-none">
+                            <p className="text-[11px] font-bold text-text-main"><span className="text-brand">Upload Report</span></p>
+                            <p className="text-[9px] text-gray-500">PDF Format (Max 5MB)</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3.5 bg-gray-100 border border-gray-200 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <FileText size={18} className="text-red-500 flex-shrink-0" />
+                            <span className="text-xs font-semibold text-text-main truncate max-w-[150px]">{pdfReport ? pdfReport.name : existingPdf.file_name}</span>
+                          </div>
+                          <button type="button" onClick={handleRemovePdf} className="p-1 text-semantic-error hover:bg-gray-200 rounded">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Additional Completion Remarks</label>
+                    <textarea
+                      value={additionalRemarks}
+                      onChange={(e) => setAdditionalRemarks(e.target.value)}
+                      className={inputClass + " h-12"}
+                      placeholder="Any final notes about event execution..."
+                    />
+                  </div>
+                </div>
+              ) : (
+                // Cancelled Inputs
+                <div className="space-y-4">
+                  <div>
+                    <label className={labelClass}>Cancellation Reason <span className="text-red-500">*</span></label>
+                    <select
+                      value={cancellationReason}
+                      onChange={(e) => setCancellationReason(e.target.value)}
+                      className={selectClass}
+                      required
+                    >
+                      <option value="">Select cancellation reason...</option>
+                      <option value="Speaker unavailable">Speaker unavailable</option>
+                      <option value="Venue issues">Venue issues</option>
+                      <option value="Low participation">Low participation</option>
+                      <option value="Scheduling conflicts">Scheduling conflicts</option>
+                      <option value="Weather conditions">Weather conditions</option>
+                      <option value="Administrative reasons">Administrative reasons</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Explain Cancellation / Remarks <span className="text-red-500">*</span></label>
+                    <textarea
+                      value={additionalRemarks}
+                      onChange={(e) => setAdditionalRemarks(e.target.value)}
+                      className={inputClass + " h-20 resize-none"}
+                      placeholder="Please details the reasons why this event proposal was cancelled..."
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
             </div>
-          </div>
+          )}
 
           {/* ── Action Buttons ── */}
           <div className="flex items-center justify-center gap-4 pt-4 border-t border-gray-100">
@@ -840,7 +987,9 @@ export default function ActivitiesPage() {
                   Submitting...
                 </>
               ) : (
-                editingActivity ? 'Update Project' : 'Create Project'
+                editingActivity
+                  ? (isCompletionMode ? 'Submit Completion' : 'Update Proposal')
+                  : 'Submit Proposal'
               )}
             </button>
           </div>
@@ -848,7 +997,7 @@ export default function ActivitiesPage() {
       </Modal>
 
       {/* Reusable Activity Details Modal */}
-      <ActivityDetailsModal 
+      <ActivityDetailsModal
         isOpen={isDetailsOpen}
         onClose={() => setIsDetailsOpen(false)}
         activity={selectedActivity}

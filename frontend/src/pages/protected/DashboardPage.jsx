@@ -42,12 +42,12 @@ export default function DashboardPage() {
             .eq('user_id', user.id)
             .neq('status', 'Draft')
 
-          // 2. Evaluation pending (Submitted / Pending Review / Resubmitted)
+          // 2. Evaluation pending (Submitted / Pending Review / Resubmitted / Event Conducted / Event Cancelled)
           const { count: pendingCount } = await supabase
             .from('activities')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
+            .in('status', ['Submitted', 'Pending Review', 'Resubmitted', 'Event Conducted', 'Event Cancelled'])
 
           // 3. Approved count
           const { count: approvedCount } = await supabase
@@ -55,6 +55,7 @@ export default function DashboardPage() {
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .eq('status', 'Approved')
+            .eq('event_status', 'Conducted')
 
           // 4. Rejected count
           const { count: rejectedCount } = await supabase
@@ -74,6 +75,7 @@ export default function DashboardPage() {
             .from('activities')
             .select('user_id')
             .eq('status', 'Approved')
+            .eq('event_status', 'Conducted')
 
           const counts = {}
           dtdApprovedActivities?.forEach(act => {
@@ -138,7 +140,7 @@ export default function DashboardPage() {
             .from('activities')
             .select('*, user:users!inner(name, club, role, pilot_id)')
             .eq('user.role', 'DTD')
-            .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
+            .in('status', ['Submitted', 'Pending Review', 'Resubmitted', 'Event Conducted', 'Event Cancelled', 'Planned'])
             .order('created_at', { ascending: false })
 
           // 4. Calculate DT leaderboard rank dynamically
@@ -152,6 +154,7 @@ export default function DashboardPage() {
             .from('activities')
             .select('user_id')
             .eq('status', 'Approved')
+            .eq('event_status', 'Conducted')
 
           const counts = {}
           dtApprovedActivities?.forEach(act => {
@@ -173,7 +176,7 @@ export default function DashboardPage() {
             rank: userRank,
             leaderboardPoints: userPoints,
             activitiesCount: activitiesCount || 0,
-            pendingCount: pendingActivities?.length || 0
+            pendingCount: pendingActivities?.filter(a => a.status !== 'Planned').length || 0
           })
           setExtraData({
             pendingActivities: pendingActivities || []
@@ -193,13 +196,13 @@ export default function DashboardPage() {
             .from('activities')
             .select('*, user:users!inner(role)', { count: 'exact', head: true })
             .eq('user.role', 'DT')
-            .in('status', ['Submitted', 'Pending Review', 'Resubmitted'])
+            .in('status', ['Submitted', 'Pending Review', 'Resubmitted', 'Event Conducted', 'Event Cancelled'])
 
           // 3. Recent activity submissions (DT submissions only, LIFO order)
           const { data: recentSubmissions } = await supabase
             .from('activities')
             .select('*, user:users!inner(name, role, club, pilot_id)')
-            .eq('user.role', 'DT')
+            .in('user.role', ['DTD', 'DT'])
             .neq('status', 'Draft')
             .order('created_at', { ascending: false })
 
@@ -404,12 +407,16 @@ export default function DashboardPage() {
           >
             Details
           </Button>
-          <Button 
-            size="sm"
-            onClick={() => navigate('/evaluate', { state: { candidateId: row.user_id } })}
-          >
-            Review Candidate
-          </Button>
+          {row.status !== 'Planned' ? (
+            <Button 
+              size="sm"
+              onClick={() => navigate('/evaluate', { state: { candidateId: row.user_id } })}
+            >
+              Review Candidate
+            </Button>
+          ) : (
+            <span className="text-xs text-text-muted italic px-2 font-medium">Planned Event</span>
+          )}
         </div>
       )
     }
@@ -417,13 +424,13 @@ export default function DashboardPage() {
 
   const adminDashboardColumns = [
     {
-      header: 'Trainer Name',
+      header: 'User Name',
       accessor: 'user.name',
       sortable: true,
       render: (row) => (
         <div>
           <span className="font-semibold text-text-main text-sm block">{row.user?.name}</span>
-          <span className="text-[10px] text-text-muted font-bold uppercase block">{row.user?.pilot_id || 'N/A'}</span>
+          <span className="text-[10px] text-text-muted font-bold uppercase block">{row.user?.pilot_id || 'N/A'} • {row.user?.role || 'N/A'}</span>
         </div>
       )
     },
@@ -446,8 +453,11 @@ export default function DashboardPage() {
       render: (row) => (
         <Badge variant={
           row.status === 'Approved' ? 'success' : 
+          row.status === 'Event Conducted' ? 'warning' : 
+          row.status === 'Event Cancelled' ? 'warning' : 
           row.status === 'Rejected' ? 'error' : 
-          row.status === 'Submitted' ? 'warning' : 'default'
+          ['Submitted', 'Pending Review', 'Resubmitted'].includes(row.status) ? 'warning' :
+          'default'
         }>
           {row.status}
         </Badge>
@@ -499,8 +509,11 @@ export default function DashboardPage() {
       render: (row) => (
         <Badge variant={
           row.status === 'Approved' ? 'success' : 
+          row.status === 'Event Conducted' ? 'warning' : 
+          row.status === 'Event Cancelled' ? 'warning' : 
           row.status === 'Rejected' ? 'error' : 
-          row.status === 'Submitted' ? 'warning' : 'default'
+          ['Submitted', 'Pending Review', 'Resubmitted'].includes(row.status) ? 'warning' :
+          'default'
         }>
           {row.status}
         </Badge>
