@@ -16,8 +16,21 @@ router.post('/', async (req, res) => {
       start_date, end_date, project_chair, project_chair_contact,
       mom, hours_conducted,
       expected_duration, objectives, expected_participants, num_participants,
-      event_status, cancellation_reason, additional_remarks
+      event_status, cancellation_reason, additional_remarks, poster_url
     } = req.body
+
+    // Server-side validations for non-draft status
+    if (status !== 'Draft') {
+      if (project_chair && !/^[a-zA-Z\s]+$/.test(project_chair.trim())) {
+        return res.status(400).json({ error: 'Project Chair Name must contain only alphabetic characters and spaces' })
+      }
+      if (project_chair_contact && !/^\d{10}$/.test(project_chair_contact)) {
+        return res.status(400).json({ error: 'Project Chair Contact must be exactly 10 digits containing only numbers' })
+      }
+      if (!poster_url) {
+        return res.status(400).json({ error: 'Event Poster is required to submit the activity.' })
+      }
+    }
 
     const { data, error } = await supabase
       .from('activities')
@@ -47,6 +60,7 @@ router.post('/', async (req, res) => {
           cancellation_reason,
           additional_remarks,
           status: status || 'Planned',
+          poster_url,
           created_at: new Date().toISOString(),
         },
       ])
@@ -282,8 +296,18 @@ router.put('/:id', async (req, res) => {
       start_date, end_date, project_chair, project_chair_contact,
       mom, hours_conducted,
       expected_duration, objectives, expected_participants, num_participants,
-      event_status, cancellation_reason, additional_remarks
+      event_status, cancellation_reason, additional_remarks, poster_url
     } = req.body
+
+    // Server-side validations for non-draft status
+    if (status !== 'Draft') {
+      if (project_chair !== undefined && project_chair && !/^[a-zA-Z\s]+$/.test(project_chair.trim())) {
+        return res.status(400).json({ error: 'Project Chair Name must contain only alphabetic characters and spaces' })
+      }
+      if (project_chair_contact !== undefined && project_chair_contact && !/^\d{10}$/.test(project_chair_contact)) {
+        return res.status(400).json({ error: 'Project Chair Contact must be exactly 10 digits containing only numbers' })
+      }
+    }
     
     const updateData = {
       updated_at: new Date().toISOString()
@@ -311,6 +335,7 @@ router.put('/:id', async (req, res) => {
     if (event_status !== undefined) updateData.event_status = event_status
     if (cancellation_reason !== undefined) updateData.cancellation_reason = cancellation_reason
     if (additional_remarks !== undefined) updateData.additional_remarks = additional_remarks
+    if (poster_url !== undefined) updateData.poster_url = poster_url
 
     const { data, error } = await supabase
       .from('activities')

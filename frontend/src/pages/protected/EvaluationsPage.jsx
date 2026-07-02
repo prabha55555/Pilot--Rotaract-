@@ -278,7 +278,7 @@ export default function EvaluationsPage() {
     { 
       header: 'Date Submitted', 
       accessor: 'created_at', 
-      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatIST(row.created_at)}</span>
     },
     {
       header: 'Actions',
@@ -348,7 +348,7 @@ export default function EvaluationsPage() {
       header: 'Date Submitted', 
       accessor: 'created_at',
       sortable: true,
-      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatIST(row.created_at)}</span>
     },
     {
       header: 'Actions',
@@ -414,7 +414,7 @@ export default function EvaluationsPage() {
     { 
       header: 'Date Evaluated', 
       accessor: 'created_at', 
-      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatIST(row.created_at)}</span>
     },
     {
       header: 'Actions',

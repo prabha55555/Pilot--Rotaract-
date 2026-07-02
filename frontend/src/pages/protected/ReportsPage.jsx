@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../../services/supabase'
 import { api } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
-import { 
+import {
   FileText, TrendingUp, BarChart3, Award, Calendar, PieChart as PieChartIcon, Activity,
   ArrowUpRight, Download, Filter, Search, ChevronRight
 } from 'lucide-react'
@@ -14,14 +14,14 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { DataTable } from '../../components/ui/DataTable'
 import { Badge } from '../../components/ui/Badge'
 import { StatCard } from '../../components/ui/StatCard'
-import { formatDateIST } from '../../utils/date'
+import { formatDateIST, formatIST } from '../../utils/date'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Toast } from '../../components/ui/Toast'
 import { Card } from '../../components/ui/Card'
 
 export default function ReportsPage() {
-  const { user, userRole } = useAuth()
-  const [activeTab, setActiveTab] = useState(userRole === 'DTD' ? 'approved-reports' : 'summary')
+  const { user, userRole, loading: authLoading } = useAuth()
+  const [activeTab, setActiveTab] = useState('summary')
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
 
@@ -33,111 +33,151 @@ export default function ReportsPage() {
   const [roleDistribution, setRoleDistribution] = useState([])
   const [categoryDistribution, setCategoryDistribution] = useState([])
   const [approvedReports, setApprovedReports] = useState([])
-  
+
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d']
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
   }
 
+  // Handle setting default tab when userRole is loaded
+  useEffect(() => {
+    if (userRole) {
+      setActiveTab(userRole === 'DTD' ? 'approved-reports' : 'summary')
+    }
+  }, [userRole])
+
   const loadReportData = async () => {
+    if (!user || !userRole) return
     setLoading(true)
     try {
-      // 1. Load Monthly Summary Data
-      const monthly = await api.getMonthlyReport()
-      setMonthlyData(monthly || [])
+      if (userRole !== 'DTD') {
+        // 1. Load Monthly Summary Data
+        const monthly = await api.getMonthlyReport()
+        setMonthlyData(monthly || [])
 
-      // 2. Load Top DTDs and DTs
-      // Fallback dynamic counting if leaderboards cache is empty
-      const fetchTopMembers = async (role) => {
-        try {
-          const data = await api.getTopMembers(role, 10)
-          if (data && data.length > 0) {
-            // Join with users table
-            const userIds = data.map(item => item.user_id)
-            const { data: users } = await supabase.from('users').select('id, name, club, pilot_id').in('id', userIds)
-            const userMap = {}
-            users?.forEach(u => { userMap[u.id] = u })
-            return data.map(item => ({ ...item, user: userMap[item.user_id] }))
+        // 2. Load Top DTDs and DTs
+        // Fallback dynamic counting if leaderboards cache is empty
+        const fetchTopMembers = async (role) => {
+          try {
+            const data = await api.getTopMembers(role, 10)
+            if (data && data.length > 0) {
+              // Join with users table
+              const userIds = data.map(item => item.user_id)
+              const { data: users } = await supabase.from('users').select('id, name, club, pilot_id').in('id', userIds)
+              const userMap = {}
+              users?.forEach(u => { userMap[u.id] = u })
+              return data
+                .map(item => ({ ...item, user: userMap[item.user_id] }))
+                .filter(item => !!item.user)
+            }
+            return []
+          } catch (e) {
+            console.warn('Leaderboard table error, falling back to dynamic:', e.message)
           }
-        } catch (e) {
-          console.warn('Leaderboard table error, falling back to dynamic:', e.message)
+
+          // Dynamic fallback
+          try {
+            const { data: users } = await supabase.from('users').select('id, name, club, pilot_id').eq('role', role).in('status', ['Active', 'Promoted'])
+            const { data: acts } = await supabase.from('activities').select('user_id').eq('status', 'Approved').eq('event_status', 'Conducted')
+
+            const counts = {}
+            acts?.forEach(a => { counts[a.user_id] = (counts[a.user_id] || 0) + 1 })
+
+            const res = users?.map(u => ({
+              user_id: u.id,
+              user: u,
+              activity_count: counts[u.id] || 0
+            })) || []
+
+            res.sort((a, b) => b.activity_count - a.activity_count)
+            return res.slice(0, 10).map((item, idx) => ({ ...item, rank: idx + 1 }))
+          } catch (err) {
+            console.error('Dynamic fallback error:', err)
+            return []
+          }
         }
-        
-        // Dynamic fallback
-        const { data: users } = await supabase.from('users').select('id, name, club, pilot_id').eq('role', role).in('status', ['Active', 'Promoted'])
-        const { data: acts } = await supabase.from('activities').select('user_id').eq('status', 'Approved').eq('event_status', 'Conducted')
-        
-        const counts = {}
-        acts?.forEach(a => { counts[a.user_id] = (counts[a.user_id] || 0) + 1 })
-        
-        const res = users?.map(u => ({
-          user_id: u.id,
-          user: u,
-          activity_count: counts[u.id] || 0
+
+        const dtds = await fetchTopMembers('DTD')
+        const dts = await fetchTopMembers('DT')
+        setTopDTDs(dtds || [])
+        setTopDTs(dts || [])
+
+        // 3. Load Promotion History Log
+        const { data: promoData } = await supabase
+          .from('promotions')
+          .select('*')
+          .order('promoted_at', { ascending: false })
+
+        const { data: allUsers } = await supabase.from('users').select('id, name, pilot_id')
+        const userMap = {}
+        allUsers?.forEach(u => { userMap[u.id] = u })
+
+        const mappedPromos = promoData?.map(p => ({
+          ...p,
+          candidate: userMap[p.user_id] || { name: 'Unknown User', pilot_id: 'N/A' },
+          promoter: userMap[p.promoted_by] || { name: 'System / Admin' }
         })) || []
-        
-        res.sort((a, b) => b.activity_count - a.activity_count)
-        return res.slice(0, 10).map((item, idx) => ({ ...item, rank: idx + 1 }))
-      }
 
-      const dtds = await fetchTopMembers('DTD')
-      const dts = await fetchTopMembers('DT')
-      setTopDTDs(dtds)
-      setTopDTs(dts)
+        setPromotions(mappedPromos)
 
-      // 3. Load Promotion History Log
-      const { data: promoData } = await supabase
-        .from('promotions')
-        .select('*')
-        .order('promoted_at', { ascending: false })
-
-      const { data: allUsers } = await supabase.from('users').select('id, name, pilot_id')
-      const userMap = {}
-      allUsers?.forEach(u => { userMap[u.id] = u })
-
-      const mappedPromos = promoData?.map(p => ({
-        ...p,
-        candidate: userMap[p.user_id] || { name: 'Unknown User', pilot_id: 'N/A' },
-        promoter: userMap[p.promoted_by] || { name: 'System / Admin' }
-      })) || []
-
-      setPromotions(mappedPromos)
-
-      // 4. Load Role and Category Distributions
-      const { data: usersData } = await supabase.from('users').select('role')
-      const roleCounts = {
-        'Super Admin': 0,
-        'Admin': 0,
-        'DT': 0,
-        'DTD': 0
-      }
-      const roleMap = {
-        'SuperAdmin': 'Super Admin',
-        'Admin': 'Admin',
-        'DT': 'DT',
-        'DTD': 'DTD'
-      }
-      usersData?.forEach(user => {
-        const displayName = roleMap[user.role] || user.role
-        if (displayName in roleCounts) {
-          roleCounts[displayName] += 1
-        } else {
-          roleCounts[displayName] = 1
+        // 4. Load Role and Category Distributions
+        const { data: usersData } = await supabase.from('users').select('role')
+        const roleCounts = {
+          'Super Admin': 0,
+          'Admin': 0,
+          'DT': 0,
+          'DTD': 0
         }
-      })
-      setRoleDistribution(Object.entries(roleCounts).map(([name, value]) => ({ name, value })))
+        const roleMap = {
+          'SuperAdmin': 'Super Admin',
+          'Admin': 'Admin',
+          'DT': 'DT',
+          'DTD': 'DTD'
+        }
+        usersData?.forEach(user => {
+          const displayName = roleMap[user.role] || user.role
+          if (displayName in roleCounts) {
+            roleCounts[displayName] += 1
+          }
+        })
+        setRoleDistribution(Object.entries(roleCounts).map(([name, value]) => ({ name, value })))
 
-      const { data: actsData } = await supabase.from('activities').select('avenue, category')
-      const catCounts = actsData?.reduce((acc, act) => {
-        const cat = act.avenue || act.category || 'Other'
-        acc[cat] = (acc[cat] || 0) + 1
-        return acc
-      }, {}) || {}
-      setCategoryDistribution(Object.entries(catCounts).map(([name, value]) => ({ name, value })))
+        const { data: actsData } = await supabase.from('activities').select('avenue, category')
+        const catCounts = actsData?.reduce((acc, act) => {
+          const cat = act.avenue || act.category || 'Other'
+          acc[cat] = (acc[cat] || 0) + 1
+          return acc
+        }, {}) || {}
+        setCategoryDistribution(Object.entries(catCounts).map(([name, value]) => ({ name, value })))
+      }
 
       // 5. Load Approved Activities for Report List
-      if (user) {
+      let actsData = []
+
+      if (userRole === 'DT') {
+        // Fetch own approved reports
+        const { data: ownData, error: ownError } = await supabase
+          .from('activities')
+          .select('*, user:users!inner(id, name, pilot_id, role, club)')
+          .eq('status', 'Approved')
+          .eq('user_id', user.id)
+
+        if (ownError) throw ownError
+
+        // Fetch DTD candidates' approved reports
+        const { data: dtdData, error: dtdError } = await supabase
+          .from('activities')
+          .select('*, user:users!inner(id, name, pilot_id, role, club)')
+          .eq('status', 'Approved')
+          .eq('user.role', 'DTD')
+
+        if (dtdError) throw dtdError
+
+        // Combine and sort by updated_at descending
+        actsData = [...(ownData || []), ...(dtdData || [])]
+        actsData.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+      } else {
         let query = supabase
           .from('activities')
           .select('*, user:users!inner(id, name, pilot_id, role, club)')
@@ -146,17 +186,17 @@ export default function ReportsPage() {
 
         if (userRole === 'DTD') {
           query = query.eq('user_id', user.id)
-        } else if (userRole === 'DT') {
-          query = query.or(`user_id.eq.${user.id},user.role.eq.DTD`)
         } else if (userRole === 'Admin') {
           query = query.in('user.role', ['DTD', 'DT'])
         }
         // SuperAdmin has access to all approved reports
 
-        const { data: actsData, error: actsError } = await query
-        if (actsError) throw actsError
-        setApprovedReports(actsData || [])
+        const { data, error } = await query
+        if (error) throw error
+        actsData = data || []
       }
+
+      setApprovedReports(actsData)
 
     } catch (err) {
       console.error(err)
@@ -167,6 +207,8 @@ export default function ReportsPage() {
   }
 
   useEffect(() => {
+    if (authLoading || !user) return
+
     loadReportData()
 
     // Subscribe to realtime database changes for synchronization
@@ -208,7 +250,7 @@ export default function ReportsPage() {
       supabase.removeChannel(activitiesChannel)
       supabase.removeChannel(promotionsChannel)
     }
-  }, [])
+  }, [authLoading, user])
 
   // Find maximum activity count for monthly chart normalization
   const maxCount = Math.max(...monthlyData.map(d => d.count), 1)
@@ -247,7 +289,7 @@ export default function ReportsPage() {
       header: 'Date Approved',
       accessor: 'updated_at',
       sortable: true,
-      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.updated_at)}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatIST(row.updated_at)}</span>
     },
     {
       header: 'Official Report',
@@ -332,11 +374,11 @@ export default function ReportsPage() {
     {
       header: 'Approval Date',
       accessor: 'promoted_at',
-      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.promoted_at)}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatIST(row.promoted_at)}</span>
     }
   ]
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center py-20">
         <LoadingSpinner size="lg" />
@@ -357,44 +399,40 @@ export default function ReportsPage() {
           <>
             <button
               onClick={() => setActiveTab('summary')}
-              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
-                activeTab === 'summary'
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${activeTab === 'summary'
                   ? 'border-brand text-brand'
                   : 'border-transparent text-text-muted hover:text-text-main'
-              }`}
+                }`}
             >
               <BarChart3 size={18} />
               Monthly Volume
             </button>
             <button
               onClick={() => setActiveTab('distributions')}
-              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
-                activeTab === 'distributions'
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${activeTab === 'distributions'
                   ? 'border-brand text-brand'
                   : 'border-transparent text-text-muted hover:text-text-main'
-              }`}
+                }`}
             >
               <PieChartIcon size={18} />
               Distributions
             </button>
             <button
               onClick={() => setActiveTab('top-members')}
-              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
-                activeTab === 'top-members'
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${activeTab === 'top-members'
                   ? 'border-brand text-brand'
                   : 'border-transparent text-text-muted hover:text-text-main'
-              }`}
+                }`}
             >
               <TrendingUp size={18} />
               Top Trainers
             </button>
             <button
               onClick={() => setActiveTab('promotions')}
-              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
-                activeTab === 'promotions'
+              className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${activeTab === 'promotions'
                   ? 'border-brand text-brand'
                   : 'border-transparent text-text-muted hover:text-text-main'
-              }`}
+                }`}
             >
               <Award size={18} />
               Promotion Audits
@@ -403,11 +441,10 @@ export default function ReportsPage() {
         )}
         <button
           onClick={() => setActiveTab('approved-reports')}
-          className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'approved-reports'
+          className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${activeTab === 'approved-reports'
               ? 'border-brand text-brand'
               : 'border-transparent text-text-muted hover:text-text-main'
-          }`}
+            }`}
         >
           <FileText size={18} />
           Approved Reports
@@ -424,15 +461,15 @@ export default function ReportsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
                   />
                   <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="count" 
-                    name="Activities Logged" 
-                    stroke="#2563eb" 
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    name="Activities Logged"
+                    stroke="#2563eb"
                     strokeWidth={3}
                     dot={{ r: 4, strokeWidth: 2 }}
                     activeDot={{ r: 6, strokeWidth: 0 }}
@@ -471,7 +508,7 @@ export default function ReportsPage() {
               </ResponsiveContainer>
             </div>
           </Card>
-          
+
           <Card className="p-7">
             <h3 className="text-base font-semibold text-text-main font-outfit mb-4">Activity Category Distribution</h3>
             <div className="h-[300px] w-full">
@@ -506,17 +543,17 @@ export default function ReportsPage() {
             <h3 className="text-base font-semibold text-text-main font-outfit mb-8">Top Trainers Comparison</h3>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[...topDTs.map(t => ({ name: t.user.name, score: t.activity_count, role: 'DT' })), ...topDTDs.map(t => ({ name: t.user.name, score: t.activity_count, role: 'DTD' }))]}>
+                <BarChart data={[...(topDTs || []).map(t => ({ name: t.user?.name || 'Unknown', score: t.activity_count, role: 'DT' })), ...(topDTDs || []).map(t => ({ name: t.user?.name || 'Unknown', score: t.activity_count, role: 'DTD' }))]}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                   <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip 
+                  <Tooltip
                     cursor={{ fill: '#f1f5f9' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   />
                   <Bar dataKey="score" fill="#3b82f6" radius={[4, 4, 0, 0]}>
                     {
-                      [...topDTs, ...topDTDs].map((entry, index) => (
+                      [...(topDTs || []), ...(topDTDs || [])].map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.role === 'DT' ? '#2563eb' : '#60a5fa'} />
                       ))
                     }

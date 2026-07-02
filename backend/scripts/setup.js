@@ -69,7 +69,8 @@ CREATE TABLE IF NOT EXISTS activities (
   outcome TEXT,
   status VARCHAR(20) NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Submitted', 'Reviewed')),
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMP DEFAULT NOW(),
+  poster_url VARCHAR(500)
 );
 
 CREATE INDEX IF NOT EXISTS idx_activities_user_id ON activities(user_id);

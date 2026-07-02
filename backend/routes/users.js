@@ -11,21 +11,32 @@ const isColumnMissingError = (err) => {
   const code = err.code || ''
   const hint = err.hint || ''
   return (
-    code === '42703' || 
-    msg.includes('column') || 
-    msg.includes('action_type') || 
-    msg.includes('schema cache') || 
+    code === '42703' ||
+    msg.includes('column') ||
+    msg.includes('action_type') ||
+    msg.includes('schema cache') ||
     hint.includes('action_type')
   )
+}
+
+const getActionType = (oldRole, newRole) => {
+  const hierarchy = { DTD: 1, DT: 2, Admin: 3, SuperAdmin: 4 }
+  const oldRank = hierarchy[oldRole] || 0
+  const newRank = hierarchy[newRole] || 0
+
+  if (oldRank === 0 || newRank === 0) return 'Role Change'
+  if (newRank > oldRank) return 'Promotion'
+  if (newRank < oldRank) return 'Demotion'
+  return 'Role Change'
 }
 
 // Get all users
 router.get('/', async (req, res) => {
   try {
     const { role, status } = req.query
-    
+
     let query = supabase.from('users').select('*')
-    
+
     if (role) query = query.eq('role', role)
     if (status) query = query.eq('status', status)
 
@@ -58,7 +69,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { email, name, club, role, batch, password, phone, pilot_id } = req.body
-    
+
     if (!password) {
       return res.status(400).json({ error: 'Password is required to create a new user account' })
     }
@@ -99,7 +110,7 @@ router.post('/', async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ error: 'Pilot ID must be unique across the system' })
     }
-    
+
     // 1. Create user in Supabase Auth via Admin API
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
@@ -136,12 +147,12 @@ router.post('/', async (req, res) => {
 
     // 4. Send Notifications
     await createNotification(
-      data.id, 
-      'Welcome to PILOT!', 
-      `Your account has been registered as ${role}. You can now sign in using your credentials or Google account.`, 
+      data.id,
+      'Welcome to PILOT!',
+      `Your account has been registered as ${role}. You can now sign in using your credentials or Google account.`,
       'welcome'
     )
-    
+
     await notifyRole(
       'SuperAdmin',
       'New User Registered',
@@ -204,6 +215,15 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Fetch original user first to check if role has changed
+    const { data: originalUser, error: fetchOriginalError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', req.params.id)
+      .single()
+
+    if (fetchOriginalError) throw fetchOriginalError
+
     const { data, error } = await supabase
       .from('users')
       .update(req.body)
@@ -212,6 +232,57 @@ router.put('/:id', async (req, res) => {
       .single()
 
     if (error) throw error
+
+    // Record promotion/demotion/role change if role was updated
+    if (req.body.role && req.body.role !== originalUser.role) {
+      const actionType = getActionType(originalUser.role, req.body.role)
+      const promoRecord = {
+        user_id: req.params.id,
+        old_role: originalUser.role,
+        new_role: req.body.role,
+        promoted_by: req.user?.id || 'abc55e97-99d1-43d2-9585-18e28283c620',
+        promoted_at: new Date().toISOString()
+      }
+
+      let promotionData, promotionError
+      const { data: dataWithAction, error: errWithAction } = await supabase
+        .from('promotions')
+        .insert([{ ...promoRecord, action_type: actionType }])
+        .select()
+        .single()
+
+      if (errWithAction && isColumnMissingError(errWithAction)) {
+        const { data: dataNoAction, error: errNoAction } = await supabase
+          .from('promotions')
+          .insert([promoRecord])
+          .select()
+          .single()
+        promotionData = dataNoAction
+        promotionError = errNoAction
+      } else {
+        promotionData = dataWithAction
+        promotionError = errWithAction
+      }
+
+      if (promotionError) {
+        console.error('Failed to insert promotion log:', promotionError.message)
+      } else {
+        // Send notification to the user about their role change
+        await createNotification(
+          req.params.id,
+          'Role Updated! ⚠️',
+          `Your role has been updated from ${originalUser.role} to ${req.body.role} by the Super Admin. Your portal access has been updated.`,
+          'role_change',
+          promotionData.id
+        )
+
+        // Send audit logs to Admin and SuperAdmin
+        const auditMsg = `Rtr. ${data.name}'s role was changed from ${originalUser.role} to ${req.body.role} by admin ${req.user?.email || 'system'}.`
+        await notifyRole('SuperAdmin', 'Role Changed', auditMsg, 'role_change', promotionData.id)
+        await notifyRole('Admin', 'Role Changed', auditMsg, 'role_change', promotionData.id)
+      }
+    }
+
     res.json(data)
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -305,10 +376,11 @@ router.patch('/:id/promote', authMiddleware, async (req, res) => {
       promoted_at: new Date().toISOString(),
     }
 
+    const actionType = getActionType(candidate.role, newRole)
     let promotionData, promotionError
     const { data: dataWithAction, error: errWithAction } = await supabase
       .from('promotions')
-      .insert([{ ...promoRecord, action_type: 'Promotion' }])
+      .insert([{ ...promoRecord, action_type: actionType }])
       .select()
       .single()
 
@@ -318,7 +390,7 @@ router.patch('/:id/promote', authMiddleware, async (req, res) => {
         .insert([promoRecord])
         .select()
         .single()
-      
+
       promotionData = dataNoAction
       promotionError = errNoAction
     } else {
@@ -329,11 +401,12 @@ router.patch('/:id/promote', authMiddleware, async (req, res) => {
     if (promotionError) throw promotionError
 
     // Send notifications
+    const promoterDesc = promoterRole === 'SuperAdmin' ? 'Super Admin' : 'Admin'
     await createNotification(
       userId,
-      'Promotion Approved! ✈️',
-      `Congratulations! You have been promoted from ${candidate.role} to ${newRole}. Your control desk privileges have been updated.`,
-      'promotion_approved',
+      'Role Updated! ⚠️',
+      `Your role has been updated from ${candidate.role} to ${newRole} by the ${promoterDesc}. Your portal access has been updated.`,
+      'role_change',
       promotionData.id
     )
 
@@ -391,7 +464,7 @@ router.post('/:id/revert', authMiddleware, async (req, res) => {
         .order('promoted_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-      
+
       lastPromo = promoNoAction
       promoError = errNoAction
     } else {
@@ -404,8 +477,8 @@ router.post('/:id/revert', authMiddleware, async (req, res) => {
     const previousRole = lastPromo
       ? lastPromo.old_role
       : (candidate.role === 'SuperAdmin' ? 'Admin' :
-         candidate.role === 'Admin' ? 'DT' :
-         candidate.role === 'DT' ? 'DTD' : null)
+        candidate.role === 'Admin' ? 'DT' :
+          candidate.role === 'DT' ? 'DTD' : null)
 
     if (!previousRole) {
       return res.status(400).json({ error: 'No promotion history found to revert for this role.' })
@@ -450,7 +523,7 @@ router.post('/:id/revert', authMiddleware, async (req, res) => {
         .insert([reversionRecord])
         .select()
         .single()
-      
+
       reversionData = revNoAction
       reversionError = revErrNoAction
     } else {

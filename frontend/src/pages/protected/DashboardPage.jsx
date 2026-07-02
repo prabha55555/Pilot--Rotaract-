@@ -13,7 +13,7 @@ import { Badge } from '../../components/ui/Badge'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
-import { formatDateIST } from '../../utils/date'
+import { formatDateIST, formatIST } from '../../utils/date'
 import { DataTable } from '../../components/ui/DataTable'
 
 export default function DashboardPage() {
@@ -171,11 +171,20 @@ export default function DashboardPage() {
           const userRank = userIndex !== -1 ? userIndex + 1 : 'Unranked'
           const userPoints = userIndex !== -1 ? dtList[userIndex].count : 0
 
+          // 5. Approved activities submitted by this DT
+          const { count: approvedCount } = await supabase
+            .from('activities')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('status', 'Approved')
+            .eq('event_status', 'Conducted')
+
           setStats({
             evaluatedCount: evaluatedCount || 0,
             rank: userRank,
             leaderboardPoints: userPoints,
             activitiesCount: activitiesCount || 0,
+            approvedCount: approvedCount || 0,
             pendingCount: pendingActivities?.filter(a => a.status !== 'Planned').length || 0
           })
           setExtraData({
@@ -347,7 +356,7 @@ export default function DashboardPage() {
       header: 'Date Submitted',
       accessor: 'created_at',
       sortable: true,
-      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatIST(row.created_at)}</span>
     },
     {
       header: 'Actions',
@@ -392,7 +401,7 @@ export default function DashboardPage() {
       header: 'Date Submitted',
       accessor: 'created_at',
       sortable: true,
-      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatIST(row.created_at)}</span>
     },
     {
       header: 'Actions',
@@ -585,18 +594,9 @@ export default function DashboardPage() {
                   "{extraData.latestEvaluation.remarks}"
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 border border-surface-border rounded-xl">
-                  <p className="text-xs text-text-muted font-semibold tracking-wider uppercase mb-2">Strengths</p>
-                  <p className="text-sm text-text-main font-medium">{extraData.latestEvaluation.strengths || 'N/A'}</p>
-                </div>
-                <div className="p-4 border border-surface-border rounded-xl">
-                  <p className="text-xs text-text-muted font-semibold tracking-wider uppercase mb-2">Key Improvements</p>
-                  <p className="text-sm text-text-main font-medium">{extraData.latestEvaluation.improvements || 'N/A'}</p>
-                </div>
-              </div>
+
               <div className="pt-2 text-xs text-text-muted font-medium">
-                Evaluator: <span className="font-semibold text-text-main">{extraData.latestEvaluation.evaluator?.name}</span> • {formatDateIST(extraData.latestEvaluation.created_at)}
+                Evaluator: <span className="font-semibold text-text-main">{extraData.latestEvaluation.evaluator?.name}</span> • {formatIST(extraData.latestEvaluation.created_at)}
               </div>
             </div>
           ) : (
@@ -630,7 +630,7 @@ export default function DashboardPage() {
 
   const renderDT = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <StatCard 
           title="Candidates Evaluated" 
           value={stats.evaluatedCount} 
@@ -648,6 +648,12 @@ export default function DashboardPage() {
           value={stats.activitiesCount} 
           icon={Activity} 
           trend={{ value: 'Personal logs', isPositive: true }}
+        />
+        <StatCard 
+          title="Approved Activities" 
+          value={stats.approvedCount} 
+          icon={CheckCircle} 
+          trend={{ value: 'Approved submissions', isPositive: true }}
         />
         <StatCard 
           title="Pending DTD Reviews" 

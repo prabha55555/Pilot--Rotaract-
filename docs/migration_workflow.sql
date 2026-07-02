@@ -28,3 +28,9 @@ ALTER TABLE activities ADD CONSTRAINT activities_status_check CHECK (status IN (
   'Cancellation Approved',
   'Cancellation Rejected'
 ));
+
+-- Add action_type column to promotions table
+ALTER TABLE promotions ADD COLUMN IF NOT EXISTS action_type VARCHAR(50) DEFAULT 'Role Change';
+
+-- Add poster_url column to activities table
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS poster_url VARCHAR(500);

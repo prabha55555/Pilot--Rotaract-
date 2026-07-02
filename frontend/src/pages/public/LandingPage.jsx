@@ -449,12 +449,14 @@ export default function LandingPage() {
                 {/* Clean soft backdrop glow */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-[#003DA5]/5 to-[#38BDF8]/10 blur-[80px] rounded-full scale-75 -z-10"></div>
 
-                {/* Jet Image */}
-                <img
-                  src={airplane}
-                  alt="Commercial Jet"
-                  className="w-[90%] h-auto object-contain filter drop-shadow-[0_20px_35px_rgba(0,61,165,0.12)] relative z-10 animate-jet-glide"
-                />
+                {/* Jet Image Wrapper to flip direction to face left */}
+                <div className="w-[90%] h-auto flex justify-center scale-x-[-1] relative z-10">
+                  <img
+                    src={airplane}
+                    alt="Commercial Jet"
+                    className="w-full h-auto object-contain filter drop-shadow-[0_20px_35px_rgba(0,61,165,0.12)] animate-jet-glide"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -513,15 +515,15 @@ export default function LandingPage() {
         <p className="text-xs text-slate-500 mt-1">Discover the leaders driving success and excellence in Rotaract District 3220.</p>
       </div>
 
-      {/* Members Infinite Marquee scrolling from right to left */}
-      <div className="w-full overflow-hidden py-6 border-y border-slate-200/50 bg-white/20 backdrop-blur-sm relative z-30 mb-6">
+      {/* Members Infinite Marquee Row 1 scrolling from right to left */}
+      <div className="w-full overflow-hidden py-4 border-t border-slate-200/50 bg-white/20 backdrop-blur-sm relative z-30 mb-4">
         <div className="relative w-full overflow-hidden flex">
           <div className="flex w-max gap-8 animate-marquee-scroll hover:[animation-play-state:paused] cursor-pointer">
 
             {/* Set 1 */}
             <div className="flex shrink-0 gap-8 items-center">
-              {members.map((member, i) => (
-                <div key={`m1-${i}`} className="flex flex-col items-center justify-center p-6 w-52 h-52 rounded-2xl bg-white/45 border border-white/65 shadow-soft backdrop-blur-md hover:bg-brand/10 hover:border-brand/35 hover:text-brand transition-all duration-300">
+              {members.slice(0, 7).map((member, i) => (
+                <div key={`m1-r1-${i}`} className="flex flex-col items-center justify-center p-6 w-52 h-52 rounded-2xl bg-white/45 border border-white/65 shadow-soft backdrop-blur-md hover:bg-brand/10 hover:border-brand/35 hover:text-brand transition-all duration-300">
                   <img src={member.img} alt={member.name} className="w-28 h-28 rounded-full object-cover mb-4 border border-slate-200 shadow-sm" />
                   <span className="text-xs font-semibold text-slate-800 text-center leading-snug">{member.name}</span>
                 </div>
@@ -530,8 +532,37 @@ export default function LandingPage() {
 
             {/* Set 2 (Duplicate for loop seamlessness) */}
             <div className="flex shrink-0 gap-8 items-center">
-              {members.map((member, i) => (
-                <div key={`m2-${i}`} className="flex flex-col items-center justify-center p-6 w-52 h-52 rounded-2xl bg-white/45 border border-white/65 shadow-soft backdrop-blur-md hover:bg-brand/10 hover:border-brand/35 hover:text-brand transition-all duration-300">
+              {members.slice(0, 7).map((member, i) => (
+                <div key={`m2-r1-${i}`} className="flex flex-col items-center justify-center p-6 w-52 h-52 rounded-2xl bg-white/45 border border-white/65 shadow-soft backdrop-blur-md hover:bg-brand/10 hover:border-brand/35 hover:text-brand transition-all duration-300">
+                  <img src={member.img} alt={member.name} className="w-28 h-28 rounded-full object-cover mb-4 border border-slate-200 shadow-sm" />
+                  <span className="text-xs font-semibold text-slate-800 text-center leading-snug">{member.name}</span>
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* Members Infinite Marquee Row 2 scrolling from left to right */}
+      <div className="w-full overflow-hidden py-4 border-b border-slate-200/50 bg-white/20 backdrop-blur-sm relative z-30 mb-6">
+        <div className="relative w-full overflow-hidden flex">
+          <div className="flex w-max gap-8 animate-marquee-scroll-reverse hover:[animation-play-state:paused] cursor-pointer">
+
+            {/* Set 1 */}
+            <div className="flex shrink-0 gap-8 items-center">
+              {members.slice(7).map((member, i) => (
+                <div key={`m1-r2-${i}`} className="flex flex-col items-center justify-center p-6 w-52 h-52 rounded-2xl bg-white/45 border border-white/65 shadow-soft backdrop-blur-md hover:bg-brand/10 hover:border-brand/35 hover:text-brand transition-all duration-300">
+                  <img src={member.img} alt={member.name} className="w-28 h-28 rounded-full object-cover mb-4 border border-slate-200 shadow-sm" />
+                  <span className="text-xs font-semibold text-slate-800 text-center leading-snug">{member.name}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Set 2 (Duplicate for loop seamlessness) */}
+            <div className="flex shrink-0 gap-8 items-center">
+              {members.slice(7).map((member, i) => (
+                <div key={`m2-r2-${i}`} className="flex flex-col items-center justify-center p-6 w-52 h-52 rounded-2xl bg-white/45 border border-white/65 shadow-soft backdrop-blur-md hover:bg-brand/10 hover:border-brand/35 hover:text-brand transition-all duration-300">
                   <img src={member.img} alt={member.name} className="w-28 h-28 rounded-full object-cover mb-4 border border-slate-200 shadow-sm" />
                   <span className="text-xs font-semibold text-slate-800 text-center leading-snug">{member.name}</span>
                 </div>

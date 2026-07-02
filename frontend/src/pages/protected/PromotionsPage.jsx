@@ -13,7 +13,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Toast } from '../../components/ui/Toast'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Button } from '../../components/ui/Button'
-import { formatDateIST } from '../../utils/date'
+import { formatDateIST, formatIST } from '../../utils/date'
 
 export default function PromotionsPage() {
   const { user: currentUser } = useAuth()
@@ -139,10 +139,16 @@ export default function PromotionsPage() {
       header: 'Action Type',
       accessor: 'action_type',
       render: (row) => {
-        const isReversion = row.action_type === 'Reversion'
+        const type = row.action_type || 'Promotion'
+        let badgeVariant = 'success'
+        if (type === 'Demotion' || type === 'Reversion') {
+          badgeVariant = 'error'
+        } else if (type === 'Role Change') {
+          badgeVariant = 'brand'
+        }
         return (
-          <Badge variant={isReversion ? 'danger' : 'success'}>
-            {row.action_type || 'Promotion'}
+          <Badge variant={badgeVariant}>
+            {type}
           </Badge>
         )
       }
@@ -156,10 +162,10 @@ export default function PromotionsPage() {
       header: 'New Role',
       accessor: 'new_role',
       render: (row) => {
-        const isReversion = row.action_type === 'Reversion'
+        const isErrorType = row.action_type === 'Reversion' || row.action_type === 'Demotion'
         return (
-          <div className={`flex items-center gap-1.5 ${isReversion ? 'text-semantic-error' : 'text-semantic-success'}`}>
-            <ArrowUpRight size={14} className={`stroke-[2.5] ${isReversion ? 'rotate-90' : ''}`} />
+          <div className={`flex items-center gap-1.5 ${isErrorType ? 'text-semantic-error' : 'text-semantic-success'}`}>
+            <ArrowUpRight size={14} className={`stroke-[2.5] ${isErrorType ? 'rotate-90' : ''}`} />
             <Badge variant={row.new_role}>{row.new_role}</Badge>
           </div>
         )
@@ -174,7 +180,7 @@ export default function PromotionsPage() {
       header: 'Date Performed',
       accessor: 'promoted_at',
       sortable: true,
-      render: (row) => <span className="text-xs text-text-light font-medium">{formatDateIST(row.promoted_at)}</span>
+      render: (row) => <span className="text-xs text-text-light font-medium">{formatIST(row.promoted_at)}</span>
     }
   ]
 

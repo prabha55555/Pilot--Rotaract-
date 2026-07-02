@@ -39,6 +39,12 @@ export const generateActivityReportPDF = async ({ activity, files = [], approver
     }
   }
 
+  // Pre-fetch poster image if it exists
+  let posterBuffer = null
+  if (activity.poster_url) {
+    posterBuffer = await fetchImageBuffer(activity.poster_url)
+  }
+
   const pdfFiles = files.filter(f => (f.file_type || '').toLowerCase() === 'pdf')
 
   // Build the PDF Kit document
@@ -171,6 +177,43 @@ export const generateActivityReportPDF = async ({ activity, files = [], approver
           align: 'justify',
           lineGap: 4
         })
+
+      // Section: Event Poster
+      if (posterBuffer) {
+        if (doc.y > doc.page.height - 250) {
+          doc.addPage()
+          doc.y = 50
+        } else {
+          doc.y += 35
+        }
+
+        doc.fillColor(brandBlue)
+          .font('Helvetica-Bold')
+          .fontSize(11)
+          .text('EVENT POSTER', 40, doc.y)
+
+        doc.moveTo(40, doc.y + 15)
+          .lineTo(555, doc.y + 15)
+          .strokeColor(accentBorder)
+          .lineWidth(1)
+          .stroke()
+
+        doc.y = doc.y + 25
+
+        try {
+          doc.image(posterBuffer, 40, doc.y, { fit: [280, 200] })
+          doc.rect(40, doc.y, 280, 200).stroke(accentBorder)
+          doc.y += 215
+        } catch (imgErr) {
+          console.error('Failed to draw event poster in PDF:', imgErr.message)
+          doc.rect(40, doc.y, 280, 200).fill('#F3F4F6').stroke(accentBorder)
+          doc.fillColor(lightGray)
+            .font('Helvetica-Bold')
+            .fontSize(8)
+            .text('[Poster unavailable]', 140, doc.y + 90)
+          doc.y += 215
+        }
+      }
 
       // Section 3: Evidence & Attachments
       // Check if we need a page break before Section 3

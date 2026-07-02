@@ -275,6 +275,32 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
 
             {/* Right Column: PDF Report, Leadership, Status Feed */}
             <div className="space-y-6">
+
+              {/* Event Poster Section */}
+              {activity.poster_url && (
+                <div>
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Image size={14} className="text-[#003DA5]" />
+                    Event Poster
+                  </h3>
+                  <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shadow-sm relative group aspect-[4/3]">
+                    <img 
+                      src={activity.poster_url} 
+                      alt="Event Poster" 
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
+                    />
+                    <a
+                      href={activity.poster_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity font-bold text-xs gap-1.5"
+                    >
+                      <ExternalLink size={14} />
+                      View Full Size
+                    </a>
+                  </div>
+                </div>
+              )}
               
               {/* PDF Report Section */}
               <div>
@@ -418,7 +444,7 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
                           "{ev.remarks}"
                         </p>
                         <span className="text-[9px] text-text-light font-semibold block pt-1">
-                          {formatDateIST(ev.created_at)}
+                          {formatIST(ev.created_at)}
                         </span>
                       </div>
                     ))}

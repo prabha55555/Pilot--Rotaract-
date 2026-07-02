@@ -14,7 +14,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Toast } from '../../components/ui/Toast'
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner'
 import { Card } from '../../components/ui/Card'
-import { formatDateIST } from '../../utils/date'
+import { formatDateIST, formatIST } from '../../utils/date'
 import { Button } from '../../components/ui/Button'
 import { ActivityDetailsModal } from '../../components/ui/ActivityDetailsModal'
 
@@ -65,6 +65,11 @@ export default function ActivitiesPage() {
   const [existingPdf, setExistingPdf] = useState(null)
   const [photosToDelete, setPhotosToDelete] = useState([])
   const [pdfToDelete, setPdfToDelete] = useState(null)
+
+  // Poster Upload States
+  const [posterFile, setPosterFile] = useState(null)
+  const [posterPreviewUrl, setPosterPreviewUrl] = useState('')
+  const [existingPosterUrl, setExistingPosterUrl] = useState('')
 
   const [submitting, setSubmitting] = useState(false)
 
@@ -146,6 +151,9 @@ export default function ActivitiesPage() {
     setExistingPdf(null)
     setPhotosToDelete([])
     setPdfToDelete(null)
+    setPosterFile(null)
+    setPosterPreviewUrl('')
+    setExistingPosterUrl('')
   }
 
   const handleOpenCreateModal = () => {
@@ -178,6 +186,7 @@ export default function ActivitiesPage() {
     setEventStatus(activity.event_status || 'Conducted')
     setCancellationReason(activity.cancellation_reason || '')
     setAdditionalRemarks(activity.additional_remarks || '')
+    setExistingPosterUrl(activity.poster_url || '')
 
     // Switch to completion mode if the event has been proposed & approved
     const isPostProposal = ['Planned', 'Under Review', 'Event Conducted', 'Event Cancelled'].includes(activity.status)
@@ -272,6 +281,32 @@ export default function ActivitiesPage() {
     e.target.value = ''
   }
 
+  const handlePosterSelect = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const ext = file.name.split('.').pop().toLowerCase()
+      if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+        showToast('File format is not supported (JPG/PNG/WEBP only).', 'error')
+        e.target.value = ''
+        return
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('Poster image exceeds the 2MB size limit.', 'error')
+        e.target.value = ''
+        return
+      }
+      setPosterFile(file)
+      setPosterPreviewUrl(URL.createObjectURL(file))
+    }
+    e.target.value = ''
+  }
+
+  const handleRemovePoster = () => {
+    setPosterFile(null)
+    setPosterPreviewUrl('')
+    setExistingPosterUrl('')
+  }
+
   const handleRemoveExistingPhoto = (p) => {
     setExistingPhotos(prev => prev.filter(item => item.id !== p.id))
     setPhotosToDelete(prev => [...prev, p])
@@ -300,8 +335,27 @@ export default function ActivitiesPage() {
 
     if (!isCompletionMode) {
       // Proposal Validation
-      if (!title || !avenue || !projectType || !projectMode || !location || !description || !startDate || !endDate || !projectChair || !expectedDuration || !objectives || !expectedParticipants) {
+      if (!title || !avenue || !projectType || !projectMode || !location || !description || !startDate || !endDate || !projectChair || !projectChairContact || !expectedDuration || !objectives || !expectedParticipants) {
         showToast('Please fill in all required proposal fields', 'error')
+        return
+      }
+
+      // Project Chair Name Validation: only alphabetic characters and spaces
+      if (!/^[a-zA-Z\s]+$/.test(projectChair.trim())) {
+        showToast('Project Chair Name must contain only alphabetic characters and spaces', 'error')
+        return
+      }
+
+      // Project Chair Contact Validation: exactly 10 digits
+      if (!/^\d{10}$/.test(projectChairContact)) {
+        showToast('Project Chair Contact must contain exactly 10 digits and numbers only', 'error')
+        return
+      }
+
+      // Event Poster Upload validation (MANDATORY)
+      const hasPoster = posterFile || existingPosterUrl
+      if (!hasPoster) {
+        showToast('Event Poster is required to submit the activity.', 'error')
         return
       }
     } else {
@@ -323,11 +377,6 @@ export default function ActivitiesPage() {
       }
     }
 
-    if (projectChairContact && !/^\d+$/.test(projectChairContact)) {
-      showToast('Project Chair Contact must contain numbers only', 'error')
-      return
-    }
-
     if (description.length > 1000) {
       showToast('Project description must be 1000 characters or less', 'error')
       return
@@ -344,6 +393,13 @@ export default function ActivitiesPage() {
       if (pdfToDelete) {
         await api.deleteStorageFile(editingActivity.id, pdfToDelete.file_url).catch(() => { })
         await api.deleteActivityFile(pdfToDelete.id)
+      }
+
+      // Upload poster if selected
+      let uploadedPosterUrl = existingPosterUrl
+      if (posterFile) {
+        const cloudPoster = await uploadToCloudinary(posterFile)
+        uploadedPosterUrl = cloudPoster.url
       }
 
       // 2. Save/Update activity meta
@@ -373,6 +429,7 @@ export default function ActivitiesPage() {
         event_status: isCompletionMode ? eventStatus : 'Conducted',
         cancellation_reason: isCompletionMode && eventStatus === 'Cancelled' ? cancellationReason : null,
         additional_remarks: additionalRemarks,
+        poster_url: uploadedPosterUrl || null,
 
         // Dynamic status workflow setting
         status: isCompletionMode
@@ -452,7 +509,7 @@ export default function ActivitiesPage() {
       header: 'Date Created',
       accessor: 'created_at',
       sortable: true,
-      render: (row) => <span className="text-xs text-text-muted font-medium">{formatDateIST(row.created_at)}</span>
+      render: (row) => <span className="text-xs text-text-muted font-medium">{formatIST(row.created_at)}</span>
     },
     {
       header: 'Status',
@@ -643,21 +700,21 @@ export default function ActivitiesPage() {
                   <div>
                     <label className={labelClass}>Avenue <span className="text-red-500">*</span></label>
                     <select value={avenue} onChange={(e) => setAvenue(e.target.value)} className={selectClass} required>
-                      <option value="">Avenue *</option>
+                      <option value="" disabled hidden>Select Avenue</option>
                       {avenues.map(a => <option key={a} value={a}>{a}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className={labelClass}>Project Type <span className="text-red-500">*</span></label>
                     <select value={projectType} onChange={(e) => setProjectType(e.target.value)} className={selectClass} required>
-                      <option value="">Project Type *</option>
+                      <option value="" disabled hidden>Select Project Type</option>
                       {projectTypes.map(pt => <option key={pt} value={pt}>{pt}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className={labelClass}>Project Mode <span className="text-red-500">*</span></label>
                     <select value={projectMode} onChange={(e) => setProjectMode(e.target.value)} className={selectClass} required>
-                      <option value="">Project Mode *</option>
+                      <option value="" disabled hidden>Select Project Mode</option>
                       {projectModes.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
@@ -731,7 +788,7 @@ export default function ActivitiesPage() {
                     <input
                       type="text"
                       value={projectChair}
-                      onChange={(e) => setProjectChair(e.target.value)}
+                      onChange={(e) => setProjectChair(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                       className={inputClass}
                       placeholder="Project Chair Name"
                       required
@@ -741,15 +798,17 @@ export default function ActivitiesPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Project Chair Contact</label>
+                    <label className={labelClass}>Project Chair Contact <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
+                      maxLength={10}
                       value={projectChairContact}
-                      onChange={(e) => setProjectChairContact(e.target.value.replace(/\D/g, ''))}
+                      onChange={(e) => setProjectChairContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
                       className={inputClass}
                       placeholder="Contact number"
+                      required
                     />
                   </div>
                   <div>
@@ -772,6 +831,43 @@ export default function ActivitiesPage() {
                     className={inputClass + " h-12"}
                     placeholder="Remarks or special requirements..."
                   />
+                </div>
+
+                {/* Poster Upload Field */}
+                <div className="space-y-2">
+                  <label className={labelClass}>Event Poster <span className="text-red-500">*</span></label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-all font-semibold text-xs text-text-main shadow-sm">
+                      <Upload size={14} className="text-[#003DA5]" />
+                      {posterFile || existingPosterUrl ? 'Change Poster' : 'Upload Poster'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handlePosterSelect}
+                      />
+                    </label>
+                    {(posterFile || existingPosterUrl) && (
+                      <button
+                        type="button"
+                        onClick={handleRemovePoster}
+                        className="px-3 py-2 bg-red-50 text-semantic-error hover:bg-semantic-error hover:text-white rounded-xl text-xs font-bold transition-all"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Live Poster Preview */}
+                  {(posterPreviewUrl || existingPosterUrl) && (
+                    <div className="mt-3 relative w-48 aspect-[4/3] rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shadow-sm">
+                      <img
+                        src={posterPreviewUrl || existingPosterUrl}
+                        alt="Poster Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
 
               </div>
