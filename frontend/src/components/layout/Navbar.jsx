@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { LogOut, ChevronDown, Bell, User, Settings, Menu, X } from 'lucide-react'
+import { LogOut, ChevronDown, Bell, User, Settings, Menu, X, Trash2 } from 'lucide-react'
 import logo from '../../utils/logo.png'
 import { formatTimeIST } from '../../utils/date'
 
@@ -14,7 +14,8 @@ export const Navbar = ({ onToggleMenu }) => {
     notifications,
     unreadCount,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
+    clearNotification
   } = useAuth()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -105,15 +106,29 @@ export const Navbar = ({ onToggleMenu }) => {
                             if (!notif.is_read) markAsRead(notif.id)
                           }}
                         >
-                          <div className="flex items-start gap-3">
-                            {!notif.is_read && <div className="mt-1.5 h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-medium ${!notif.is_read ? 'text-text-main font-semibold' : 'text-text-muted'}`}>{notif.title}</p>
-                              <p className="text-xs text-text-muted mt-0.5 break-words">{notif.message}</p>
-                              <span className="text-[10px] text-text-light font-medium block mt-1">
-                                {formatTimeIST(notif.created_at)}
-                              </span>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 min-w-0">
+                              {!notif.is_read && <div className="mt-1.5 h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
+                              <div className="min-w-0">
+                                <p className={`text-sm font-medium ${!notif.is_read ? 'text-text-main font-semibold' : 'text-text-muted'}`}>{notif.title}</p>
+                                <p className="text-xs text-text-muted mt-0.5 break-words">{notif.message}</p>
+                                <span className="text-[10px] text-text-light font-medium block mt-1">
+                                  {formatTimeIST(notif.created_at)}
+                                </span>
+                              </div>
                             </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm('Are you sure you want to delete this notification?')) {
+                                  clearNotification(notif.id).catch(() => {});
+                                }
+                              }}
+                              title="Delete Notification"
+                              className="p-1 text-text-light hover:text-semantic-error hover:bg-rose-50 rounded transition-all flex-shrink-0"
+                            >
+                              <Trash2 size={12} className="stroke-[2.5]" />
+                            </button>
                           </div>
                         </div>
                       ))
