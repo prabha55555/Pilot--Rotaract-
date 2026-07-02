@@ -449,8 +449,8 @@ export default function LandingPage() {
                 {/* Clean soft backdrop glow */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-[#003DA5]/5 to-[#38BDF8]/10 blur-[80px] rounded-full scale-75 -z-10"></div>
 
-                {/* Jet Image Wrapper to flip direction to face left */}
-                <div className="w-[90%] h-auto flex justify-center scale-x-[-1] relative z-10">
+                {/* Jet Image Wrapper to orient airplane facing upwards */}
+                <div className="w-[100%] h-auto flex justify-center relative z-10" style={{ transform: 'rotate(-30deg)' }}>
                   <img
                     src={airplane}
                     alt="Commercial Jet"
