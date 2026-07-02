@@ -309,7 +309,7 @@ export default function LandingPage() {
             </div>
             <div className="w-[1.5px] h-6 bg-[#003DA5]/30 hidden md:block"></div>
             <span className="text-xs font-bold text-[#003DA5] tracking-widest uppercase font-mono hidden md:block">
-              DISTRICT 3220 CONTROL
+              ROTARY INTERNATIONAL DISTRICT 3206
             </span>
           </div>
 
@@ -391,9 +391,9 @@ export default function LandingPage() {
 
               {/* Headline */}
               <h1 className="text-5xl sm:text-5xl md:text-4xl lg:text-[48px] xl:text-[52px] font-extrabold font-outfit text-[#0C122C] leading-tight tracking-tight">
-                Identify. Train.<br />
+                Rotaract District<br />
                 <span className="text-[#003DA5] font-extrabold">
-                  Empower. Lead.
+                  Trainers Workshop
                 </span>
               </h1>
 
@@ -515,7 +515,9 @@ export default function LandingPage() {
         <p className="text-xs text-slate-500 mt-1">Discover the leaders driving success and excellence in Rotaract District 3220.</p>
       </div>
 
+
       {/* Members Infinite Marquee Row 1 scrolling from right to left */}
+
       <div className="w-full overflow-hidden py-4 border-t border-slate-200/50 bg-white/20 backdrop-blur-sm relative z-30 mb-4">
         <div className="relative w-full overflow-hidden flex">
           <div className="flex w-max gap-8 animate-marquee-scroll hover:[animation-play-state:paused] cursor-pointer">
@@ -530,7 +532,12 @@ export default function LandingPage() {
               ))}
             </div>
 
+
+
+
+
             {/* Set 2 (Duplicate for loop seamlessness) */}
+
             <div className="flex shrink-0 gap-8 items-center">
               {members.slice(0, 7).map((member, i) => (
                 <div key={`m2-r1-${i}`} className="flex flex-col items-center justify-center p-6 w-52 h-52 rounded-2xl bg-white/45 border border-white/65 shadow-soft backdrop-blur-md hover:bg-brand/10 hover:border-brand/35 hover:text-brand transition-all duration-300">
