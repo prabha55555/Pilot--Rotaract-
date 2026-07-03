@@ -96,7 +96,7 @@ export const ActivityDetailsModal = ({ isOpen, onClose, activity }) => {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
         </div>
       ) : (
-        <div className="space-y-8 max-h-[80vh] overflow-y-auto pr-1">
+        <div className="space-y-8">
           {/* Header Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
             <div>

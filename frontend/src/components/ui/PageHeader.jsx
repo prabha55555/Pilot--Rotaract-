@@ -22,7 +22,7 @@ export const PageHeader = ({
       {actionText && onActionClick && (
         <button
           onClick={onActionClick}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-brand hover:bg-brand/90 text-white text-sm font-semibold rounded-xl shadow-elegant hover:shadow-hover hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-brand hover:bg-brand/90 text-white text-sm font-semibold rounded-xl shadow-elegant hover:shadow-hover hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 self-start md:self-auto"
         >
           {ActionIcon && <ActionIcon size={16} className="stroke-[2.5]" />}
           {actionText}

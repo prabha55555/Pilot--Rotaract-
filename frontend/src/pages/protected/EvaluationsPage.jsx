@@ -465,7 +465,7 @@ export default function EvaluationsPage() {
         // Evaluator Listing
         <div className="space-y-6">
           {/* Sub-tabs for Evaluator */}
-          <div className="flex border-b border-surface-border gap-6">
+          <div className="flex border-b border-surface-border gap-6 overflow-x-auto no-scrollbar whitespace-nowrap pb-1">
             <button
               onClick={() => setEvaluatorTab('pending')}
               className={`pb-4 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${

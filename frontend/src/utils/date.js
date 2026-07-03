@@ -13,7 +13,13 @@
 export const formatIST = (dateVal) => {
   if (!dateVal) return '-'
   try {
-    const date = new Date(dateVal)
+    let dateStr = String(dateVal)
+    if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/.test(dateStr)) {
+      if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !/-\d{2}:\d{2}$/.test(dateStr)) {
+        dateStr += 'Z'
+      }
+    }
+    const date = new Date(dateStr)
     if (isNaN(date.getTime())) return '-'
     return new Intl.DateTimeFormat('en-IN', {
       timeZone: 'Asia/Kolkata',
@@ -36,7 +42,13 @@ export const formatIST = (dateVal) => {
 export const formatDateIST = (dateVal) => {
   if (!dateVal) return '-'
   try {
-    const date = new Date(dateVal)
+    let dateStr = String(dateVal)
+    if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/.test(dateStr)) {
+      if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !/-\d{2}:\d{2}$/.test(dateStr)) {
+        dateStr += 'Z'
+      }
+    }
+    const date = new Date(dateStr)
     if (isNaN(date.getTime())) return '-'
     return new Intl.DateTimeFormat('en-IN', {
       timeZone: 'Asia/Kolkata',
@@ -58,7 +70,13 @@ export const formatDateIST = (dateVal) => {
 export const formatTimeIST = (dateVal) => {
   if (!dateVal) return '-'
   try {
-    const date = new Date(dateVal)
+    let dateStr = String(dateVal)
+    if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/.test(dateStr)) {
+      if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !/-\d{2}:\d{2}$/.test(dateStr)) {
+        dateStr += 'Z'
+      }
+    }
+    const date = new Date(dateStr)
     if (isNaN(date.getTime())) return '-'
     return new Intl.DateTimeFormat('en-IN', {
       timeZone: 'Asia/Kolkata',

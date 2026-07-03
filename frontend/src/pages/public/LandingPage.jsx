@@ -366,7 +366,7 @@ export default function LandingPage() {
           <div className="md:col-span-7 flex flex-col md:flex-row items-center gap-8 md:gap-12 animate-fade-in-up order-1 md:order-none">
 
             {/* 1. Circular Logo Badge (~280px diameter) */}
-            <div className="relative flex items-center justify-center p-6 w-[280px] h-[280px] shrink-0">
+            <div className="relative flex items-center justify-center p-6 w-[240px] h-[240px] md:w-[280px] md:h-[280px] shrink-0">
               {/* Outer thin dashed circle ring with dot accents */}
               <div className="absolute inset-0 rounded-full border border-dashed border-[#003DA5]/15 animate-[spin_60s_linear_infinite] pointer-events-none">
                 <div className="absolute top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#003DA5]/20"></div>
@@ -374,9 +374,9 @@ export default function LandingPage() {
               </div>
 
               {/* Inner solid navy blue filled circle */}
-              <div className="w-[220px] h-[220px] rounded-full bg-[#003DA5] flex flex-col items-center justify-center p-6 shadow-2xl relative transition-all duration-700 hover:scale-105 hover:shadow-[0_20px_50px_rgba(0,61,165,0.25)]">
+              <div className="w-[180px] h-[180px] md:w-[220px] md:h-[220px] rounded-full bg-[#003DA5] flex flex-col items-center justify-center p-6 shadow-2xl relative transition-all duration-700 hover:scale-105 hover:shadow-[0_20px_50px_rgba(0,61,165,0.25)]">
                 {/* Inner Logo image */}
-                <img src={logo} alt="PILOT Logo" className="w-[170px] h-auto object-contain rounded-md" />
+                <img src={logo} alt="PILOT Logo" className="w-[130px] md:w-[170px] h-auto object-contain rounded-md" />
               </div>
             </div>
 
@@ -390,7 +390,7 @@ export default function LandingPage() {
               </div>
 
               {/* Headline */}
-              <h1 className="text-5xl sm:text-5xl md:text-4xl lg:text-[48px] xl:text-[52px] font-extrabold font-outfit text-[#0C122C] leading-tight tracking-tight">
+              <h1 className="text-4xl sm:text-5xl md:text-4xl lg:text-[48px] xl:text-[52px] font-extrabold font-outfit text-[#0C122C] leading-tight tracking-tight">
                 Rotaract District<br />
                 <span className="text-[#003DA5] font-extrabold">
                   Trainers Workshop
@@ -469,7 +469,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-5 rounded-2xl bg-white/80 border border-slate-200/60 shadow-lg backdrop-blur-md">
 
             {/* Feature 1 */}
-            <div className="flex items-center gap-3 px-4 border-r border-slate-100 last:border-0 md:justify-center">
+            <div className="flex items-center gap-3 px-4 md:border-r md:border-slate-100 last:border-0 md:justify-center">
               <Users className="text-[#003DA5] flex-shrink-0 w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
               <div className="text-left font-sans">
                 <span className="text-xs md:text-sm lg:text-base font-bold text-slate-800 block">Empowering</span>
@@ -478,7 +478,7 @@ export default function LandingPage() {
             </div>
 
             {/* Feature 2 */}
-            <div className="flex items-center gap-3 px-4 border-r border-slate-100 last:border-0 md:justify-center">
+            <div className="flex items-center gap-3 px-4 md:border-r md:border-slate-100 last:border-0 md:justify-center">
               <TrendingUp className="text-[#003DA5] flex-shrink-0 w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
               <div className="text-left font-sans">
                 <span className="text-xs md:text-sm lg:text-base font-bold text-slate-800 block">Tracking</span>
@@ -487,7 +487,7 @@ export default function LandingPage() {
             </div>
 
             {/* Feature 3 */}
-            <div className="flex items-center gap-3 px-4 border-r border-slate-100 last:border-0 md:justify-center">
+            <div className="flex items-center gap-3 px-4 md:border-r md:border-slate-100 last:border-0 md:justify-center">
               <Award className="text-[#003DA5] flex-shrink-0 w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7" />
               <div className="text-left font-sans">
                 <span className="text-xs md:text-sm lg:text-base font-bold text-slate-800 block">Recognizing</span>

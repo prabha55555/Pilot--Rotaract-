@@ -24,6 +24,13 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('summary')
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Report Data State
   const [topDTDs, setTopDTDs] = useState([])
@@ -394,7 +401,7 @@ export default function ReportsPage() {
       />
 
       {/* Tabs Menu */}
-      <div className="flex border-b border-surface-border gap-6">
+      <div className="flex border-b border-surface-border gap-6 overflow-x-auto no-scrollbar whitespace-nowrap pb-1">
         {userRole !== 'DTD' && (
           <>
             <button
@@ -459,7 +466,7 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} angle={isMobile ? -45 : 0} textAnchor={isMobile ? 'end' : 'middle'} height={isMobile ? 50 : 30} />
                   <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
@@ -487,16 +494,16 @@ export default function ReportsPage() {
             <h3 className="text-base font-semibold text-text-main font-outfit mb-4">User Roles Distribution</h3>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 20, right: 60, left: 60, bottom: 20 }}>
+                <PieChart margin={isMobile ? { top: 10, right: 10, left: 10, bottom: 10 } : { top: 20, right: 60, left: 60, bottom: 20 }}>
                   <Pie
                     data={roleDistribution}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
+                    innerRadius={isMobile ? 35 : 50}
+                    outerRadius={isMobile ? 60 : 80}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={isMobile ? false : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
                     {roleDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -513,16 +520,16 @@ export default function ReportsPage() {
             <h3 className="text-base font-semibold text-text-main font-outfit mb-4">Activity Category Distribution</h3>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 20, right: 60, left: 60, bottom: 20 }}>
+                <PieChart margin={isMobile ? { top: 10, right: 10, left: 10, bottom: 10 } : { top: 20, right: 60, left: 60, bottom: 20 }}>
                   <Pie
                     data={categoryDistribution}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
+                    innerRadius={isMobile ? 35 : 50}
+                    outerRadius={isMobile ? 60 : 80}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={isMobile ? false : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
                     {categoryDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
@@ -545,7 +552,7 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[...(topDTs || []).map(t => ({ name: t.user?.name || 'Unknown', score: t.activity_count, role: 'DT' })), ...(topDTDs || []).map(t => ({ name: t.user?.name || 'Unknown', score: t.activity_count, role: 'DTD' }))]}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} angle={isMobile ? -45 : 0} textAnchor={isMobile ? 'end' : 'middle'} height={isMobile ? 60 : 30} />
                   <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip
                     cursor={{ fill: '#f1f5f9' }}
